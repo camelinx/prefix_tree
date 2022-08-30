@@ -98,7 +98,7 @@ var (
     v6MaskMsg [ net.IPv6len ]byte = [ net.IPv6len ]byte{ msbByteVal, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
 )
 
-func ( t *tree )InsertV4( saddr string, value interface{ } )( OpResult, error ) {
+func ( t *tree )Insertv4( saddr string, value interface{ } )( OpResult, error ) {
     if nil == t {
         return Err, fmt.Errorf( "invalid prefix tree" )
     }
@@ -106,7 +106,7 @@ func ( t *tree )InsertV4( saddr string, value interface{ } )( OpResult, error ) 
     match   := v4MaskMsb
     maskIdx := 0
 
-    addr, mask, err := getV4Addr( saddr )
+    addr, mask, err := getv4Addr( saddr )
     if nil != err {
         return Err, err
     }
@@ -191,7 +191,7 @@ func ( t *tree )InsertV4( saddr string, value interface{ } )( OpResult, error ) 
 }
 
 // Caller must lock
-func ( t *tree )findV4( addr net.IP, mask net.IPMask, mType MatchType )( *treeNode, OpResult, error ) {
+func ( t *tree )findv4( addr net.IP, mask net.IPMask, mType MatchType )( *treeNode, OpResult, error ) {
     if nil == t {
         return nil, Err, fmt.Errorf( "invalid prefix tree" )
     }
@@ -234,12 +234,12 @@ func ( t *tree )findV4( addr net.IP, mask net.IPMask, mType MatchType )( *treeNo
     return nil, NoMatch, fmt.Errorf( "not found" )
 }
 
-func ( t *tree )DeleteV4( saddr string )( OpResult, interface{ }, error ) {
+func ( t *tree )Deletev4( saddr string )( OpResult, interface{ }, error ) {
     if nil == t {
         return Err, nil, fmt.Errorf( "invalid prefix tree" )
     }
 
-    addr, mask, err := getV4Addr( saddr )
+    addr, mask, err := getv4Addr( saddr )
     if nil != err {
         return Err, nil, err
     }
@@ -249,7 +249,7 @@ func ( t *tree )DeleteV4( saddr string )( OpResult, interface{ }, error ) {
         t.unlock( )
     }( )
 
-    node, result, err := t.findV4( addr, mask, Exact )
+    node, result, err := t.findv4( addr, mask, Exact )
     if nil != err || Match != result {
         return Err, nil, err
     }
@@ -281,12 +281,12 @@ func ( t *tree )DeleteV4( saddr string )( OpResult, interface{ }, error ) {
     return Match, node.value, nil
 }
 
-func ( t *tree )FindV4( saddr string, mType MatchType )( OpResult, interface{ }, error ) {
+func ( t *tree )Searchv4( saddr string, mType MatchType )( OpResult, interface{ }, error ) {
     if nil == t {
         return Err, nil, fmt.Errorf( "invalid prefix tree" )
     }
 
-    addr, mask, err := getV4Addr( saddr )
+    addr, mask, err := getv4Addr( saddr )
     if nil != err {
         return Err, nil, err
     }
@@ -296,7 +296,7 @@ func ( t *tree )FindV4( saddr string, mType MatchType )( OpResult, interface{ },
         t.runlock( )
     }( )
 
-    node, result, err := t.findV4( addr, mask, mType )
+    node, result, err := t.findv4( addr, mask, mType )
     if nil != err || Match != result {
         return Err, nil, err
     }

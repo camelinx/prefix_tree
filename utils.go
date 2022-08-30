@@ -5,7 +5,7 @@ import (
     "net"
 )
 
-func getV4Addr( saddr string )( net.IP, net.IPMask, error ) {
+func getv4Addr( saddr string )( net.IP, net.IPMask, error ) {
     _, ipnet, err := net.ParseCIDR( saddr )
     if nil == err {
         if nil == ipnet.IP.To4( ) {
@@ -23,7 +23,7 @@ func getV4Addr( saddr string )( net.IP, net.IPMask, error ) {
     return nil, nil, fmt.Errorf( "invalid v4 address %s", saddr )
 }
 
-func getV6Addr( saddr string )( net.IP, net.IPMask, error ) {
+func getv6Addr( saddr string )( net.IP, net.IPMask, error ) {
     _, ipnet, err := net.ParseCIDR( saddr )
     if nil == err {
         if nil == ipnet.IP.To16( ) {
