@@ -77,12 +77,12 @@ func ( t *tree )unlock( )( ) {
 type OpResult int
 
 const (
-    OpErr   OpResult = iota
-    OpOk
-    OpDup
-    OpMatch
-    OpPartialMatch
-    OpNoMatch
+    Err   OpResult = iota
+    Ok
+    Dup
+    Match
+    PartialMatch
+    NoMatch
 )
 
 var (
@@ -93,7 +93,7 @@ var (
 
 func ( t *tree )InsertV4( saddr string, value interface{ } )( OpResult, error ) {
     if nil == t {
-        return OpErr, fmt.Errorf( "invalid prefix tree" )
+        return Err, fmt.Errorf( "invalid prefix tree" )
     }
 
     match   := v4MaskMsb
@@ -101,7 +101,7 @@ func ( t *tree )InsertV4( saddr string, value interface{ } )( OpResult, error ) 
 
     addr, mask, err := getV4Addr( saddr )
     if nil != err {
-        return OpErr, err
+        return Err, err
     }
 
     t.wlock( )    
@@ -139,17 +139,17 @@ func ( t *tree )InsertV4( saddr string, value interface{ } )( OpResult, error ) 
 
     if nil != next {
         if node.isTerminal( ) {
-            return OpDup, nil
+            return Dup, nil
         }
 
         node.value = value
         node.markTerminal( )
 
-        return OpOk, nil
+        return Ok, nil
     }
 
     if net.IPv4len == maskIdx {
-        return OpErr, fmt.Errorf( "failed to add %s", saddr )
+        return Err, fmt.Errorf( "failed to add %s", saddr )
     }
 
     for 1 == addr[ maskIdx ] & mask[ maskIdx ] {
@@ -180,13 +180,13 @@ func ( t *tree )InsertV4( saddr string, value interface{ } )( OpResult, error ) 
     node.value = value
     node.markTerminal( )
 
-    return OpOk, nil
+    return Ok, nil
 }
 
 // Caller must lock
 func ( t *tree )findV4( addr net.IP, mask net.IPMask, prefix bool )( *treeNode, OpResult, error ) {
     if nil == t {
-        return nil, OpErr, fmt.Errorf( "invalid prefix tree" )
+        return nil, Err, fmt.Errorf( "invalid prefix tree" )
     }
 
     match   := v4MaskMsb
@@ -194,11 +194,11 @@ func ( t *tree )findV4( addr net.IP, mask net.IPMask, prefix bool )( *treeNode, 
 
     node := t.root
 
-    ret := OpMatch
+    ret := Match
 
     for nil != node && 1 == match[ maskIdx ] & mask[ maskIdx ] {
         if prefix && node.isTerminal( ) {
-            ret = OpPartialMatch
+            ret = PartialMatch
             break
         }
 
@@ -224,5 +224,5 @@ func ( t *tree )findV4( addr net.IP, mask net.IPMask, prefix bool )( *treeNode, 
         return node, ret, nil
     }
 
-    return nil, OpNoMatch, fmt.Errorf( "not found" )
+    return nil, NoMatch, fmt.Errorf( "not found" )
 }
