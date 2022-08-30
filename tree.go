@@ -82,7 +82,10 @@ const (
     OpDup
 )
 
-var v4MaskMsb [ net.IPv4len ]byte = [ net.IPv4len ]byte{ 128, 0, 0, 0 }
+var (
+    msbByteVal byte = byte( 128 )
+    v4MaskMsb [ net.IPv4len ]byte = [ net.IPv4len ]byte{ msbByteVal, 0, 0, 0 }
+)
 
 func ( t *tree )InsertV4( saddr string, value interface{ } )( OpResult, error ) {
     if nil == t {
@@ -124,7 +127,7 @@ func ( t *tree )InsertV4( saddr string, value interface{ } )( OpResult, error ) 
                 break
             }
 
-            match[ maskIdx ] = 128
+            match[ maskIdx ] = msbByteVal
         } else {
             match[ maskIdx ] >>= 1
         }
