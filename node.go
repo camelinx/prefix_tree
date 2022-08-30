@@ -24,3 +24,9 @@ func ( node *treeNode )isLeaf( )( bool ) {
 func ( node *treeNode )isTerminal( )( bool ) {
     return nil != node && node.terminal
 }
+
+func ( node *treeNode )markTerminal( )( ) {
+    if nil != node {
+        node.terminal = true
+    }
+}

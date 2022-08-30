@@ -80,6 +80,9 @@ const (
     OpErr   OpResult = iota
     OpOk
     OpDup
+    OpMatch
+    OpPartialMatch
+    OpNoMatch
 )
 
 var (
@@ -139,6 +142,8 @@ func ( t *tree )InsertV4( saddr string, value interface{ } )( OpResult, error ) 
         }
 
         node.value = value
+        node.markTerminal( )
+
         return OpOk, nil
     }
 
@@ -161,12 +166,61 @@ func ( t *tree )InsertV4( saddr string, value interface{ } )( OpResult, error ) 
 
         if 1 == match[ maskIdx ] {
             maskIdx++
-            match[ maskIdx ] = 128
+            if net.IPv4len == maskIdx {
+                break
+            }
+
+            match[ maskIdx ] = msbByteVal
         } else {
             match[ maskIdx ] >>= 1
         }
     }
 
     node.value = value
+    node.markTerminal( )
+
     return OpOk, nil
+}
+
+func ( t *tree )findV4( addr net.IP, mask net.IPMask, prefix bool )( *treeNode, OpResult, error ) {
+    if nil == t {
+        return nil, OpErr, fmt.Errorf( "invalid prefix tree" )
+    }
+
+    match   := v4MaskMsb
+    maskIdx := 0
+
+    node := t.root
+
+    ret := OpMatch
+
+    for nil != node && 1 == match[ maskIdx ] & mask[ maskIdx ] {
+        if prefix && node.isTerminal( ) {
+            ret = OpPartialMatch
+            break
+        }
+
+        if 1 == addr[ maskIdx ] & match[ maskIdx ] {
+            node = node.right
+        } else {
+            node = node.left
+        }
+
+        if 1 == match[ maskIdx ] {
+            maskIdx++
+            if net.IPv4len == maskIdx {
+                break
+            }
+
+            match[ maskIdx ] = msbByteVal
+        } else {
+            match[ maskIdx ] >>= 1
+        }
+    }
+
+    if nil != node && OpMatch == ret && node.isTerminal( ) {
+        return node, OpMatch, nil
+    }
+
+    return nil, OpNoMatch, fmt.Errorf( "not found" )
 }
