@@ -30,3 +30,9 @@ func ( node *treeNode )markTerminal( )( ) {
         node.terminal = true
     }
 }
+
+func ( node *treeNode )unmarkTerminal( )( ) {
+    if nil != node {
+        node.terminal = false
+    }
+}

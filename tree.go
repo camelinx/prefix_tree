@@ -85,6 +85,13 @@ const (
     NoMatch
 )
 
+type MatchType int
+
+const (
+    Exact   MatchType = iota
+    Partial
+)
+
 var (
     msbByteVal byte = byte( 128 )
     v4MaskMsb [ net.IPv4len ]byte = [ net.IPv4len ]byte{ msbByteVal, 0, 0, 0 }
@@ -184,7 +191,7 @@ func ( t *tree )InsertV4( saddr string, value interface{ } )( OpResult, error ) 
 }
 
 // Caller must lock
-func ( t *tree )findV4( addr net.IP, mask net.IPMask, prefix bool )( *treeNode, OpResult, error ) {
+func ( t *tree )findV4( addr net.IP, mask net.IPMask, mType MatchType )( *treeNode, OpResult, error ) {
     if nil == t {
         return nil, Err, fmt.Errorf( "invalid prefix tree" )
     }
@@ -197,7 +204,7 @@ func ( t *tree )findV4( addr net.IP, mask net.IPMask, prefix bool )( *treeNode, 
     ret := Match
 
     for nil != node && 1 == match[ maskIdx ] & mask[ maskIdx ] {
-        if prefix && node.isTerminal( ) {
+        if Partial == mType && node.isTerminal( ) {
             ret = PartialMatch
             break
         }
@@ -225,4 +232,79 @@ func ( t *tree )findV4( addr net.IP, mask net.IPMask, prefix bool )( *treeNode, 
     }
 
     return nil, NoMatch, fmt.Errorf( "not found" )
+}
+
+func ( t *tree )DeleteV4( saddr string )( OpResult, interface{ }, error ) {
+    if nil == t {
+        return Err, nil, fmt.Errorf( "invalid prefix tree" )
+    }
+
+    addr, mask, err := getV4Addr( saddr )
+    if nil != err {
+        return Err, nil, err
+    }
+
+    t.wlock( )
+    defer func( ) {
+        t.unlock( )
+    }( )
+
+    node, result, err := t.findV4( addr, mask, Exact )
+    if nil != err || Match != result {
+        return Err, nil, err
+    }
+
+    // This condition should never be hit
+    if nil == node || !node.isTerminal( ) || node.isRoot( ) {
+        return Err, nil, fmt.Errorf( "node not found" )
+    }
+
+    if !node.isLeaf( ) {
+        node.unmarkTerminal( )
+        return Match, node.value, nil
+    }
+
+    for true {
+        if node == node.parent.right {
+            node.parent.right = nil
+        } else {
+            node.parent.left = nil
+        }
+
+        node = node.parent
+
+        if !node.isLeaf( ) || node.isTerminal( ) || node.isRoot( ) {
+            break
+        }
+    }
+
+    return Match, node.value, nil
+}
+
+func ( t *tree )FindV4( saddr string, mType MatchType )( OpResult, interface{ }, error ) {
+    if nil == t {
+        return Err, nil, fmt.Errorf( "invalid prefix tree" )
+    }
+
+    addr, mask, err := getV4Addr( saddr )
+    if nil != err {
+        return Err, nil, err
+    }
+
+    t.rlock( )
+    defer func( ) {
+        t.runlock( )
+    }( )
+
+    node, result, err := t.findV4( addr, mask, mType )
+    if nil != err || Match != result {
+        return Err, nil, err
+    }
+
+    // This condition should never be hit
+    if nil == node || !node.isTerminal( ) || node.isRoot( ) {
+        return Err, nil, fmt.Errorf( "node not found" )
+    }
+
+    return Match, node.value, nil
 }
