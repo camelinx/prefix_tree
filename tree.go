@@ -88,6 +88,7 @@ const (
 var (
     msbByteVal byte = byte( 128 )
     v4MaskMsb [ net.IPv4len ]byte = [ net.IPv4len ]byte{ msbByteVal, 0, 0, 0 }
+    v6MaskMsg [ net.IPv6len ]byte = [ net.IPv6len ]byte{ msbByteVal, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
 )
 
 func ( t *tree )InsertV4( saddr string, value interface{ } )( OpResult, error ) {
@@ -182,6 +183,7 @@ func ( t *tree )InsertV4( saddr string, value interface{ } )( OpResult, error ) 
     return OpOk, nil
 }
 
+// Caller must lock
 func ( t *tree )findV4( addr net.IP, mask net.IPMask, prefix bool )( *treeNode, OpResult, error ) {
     if nil == t {
         return nil, OpErr, fmt.Errorf( "invalid prefix tree" )
@@ -218,8 +220,8 @@ func ( t *tree )findV4( addr net.IP, mask net.IPMask, prefix bool )( *treeNode, 
         }
     }
 
-    if nil != node && OpMatch == ret && node.isTerminal( ) {
-        return node, OpMatch, nil
+    if nil != node && node.isTerminal( ) {
+        return node, ret, nil
     }
 
     return nil, OpNoMatch, fmt.Errorf( "not found" )
