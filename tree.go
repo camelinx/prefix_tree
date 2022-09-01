@@ -117,8 +117,8 @@ func ( t *tree )Insert( key [ ]byte, mask [ ]byte, keyLen int, value interface{ 
     node := t.root
     next := t.root
 
-    for 1 == match[ maskIdx ] & mask[ maskIdx ] {
-        if 1 == key[ maskIdx ] & match[ maskIdx ] {
+    for match[ maskIdx ] == match[ maskIdx ] & mask[ maskIdx ] {
+        if match[ maskIdx ] == match[ maskIdx ] & key[ maskIdx ] {
             next = node.right
         } else {
             next = node.left
@@ -157,12 +157,12 @@ func ( t *tree )Insert( key [ ]byte, mask [ ]byte, keyLen int, value interface{ 
         return Err, fmt.Errorf( "insert failed" )
     }
 
-    for 1 == key[ maskIdx ] & mask[ maskIdx ] {
+    for match[ maskIdx ] == match[ maskIdx ] & mask[ maskIdx ] {
         next = newNode( )
 
         next.parent = node
 
-        if 1 == key[ maskIdx ] & match[ maskIdx ] {
+        if match[ maskIdx ] == match[ maskIdx ] & key[ maskIdx ] {
             node.right = next
         } else {
             node.left = next
@@ -206,13 +206,13 @@ func ( t *tree )find( key [ ]byte, mask [ ]byte, keyLen int, mType MatchType )( 
     node := t.root
     ret  := Match
 
-    for nil != node && 1 == match[ maskIdx ] & mask[ maskIdx ] {
+    for nil != node && match[ maskIdx ] == match[ maskIdx ] & mask[ maskIdx ] {
         if Partial == mType && node.isTerminal( ) {
             ret = PartialMatch
             break
         }
 
-        if 1 == key[ maskIdx ] & match[ maskIdx ] {
+        if match[ maskIdx ] == match[ maskIdx ] & key[ maskIdx ] {
             node = node.right
         } else {
             node = node.left
