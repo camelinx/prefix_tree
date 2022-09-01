@@ -2,7 +2,6 @@ package prefix_tree
 
 import (
     "fmt"
-    "net"
 )
 
 type ReadLockFn func( interface{ } )( )
@@ -19,7 +18,7 @@ type tree struct {
     rlockFn      ReadLockFn
     runlockFn    ReadUnlockFn
     wlockFn      WriteLockFn
-    unlockFn     UnlockFn 
+    unlockFn     UnlockFn
 }
 
 func Init( )( *tree ) {
@@ -94,24 +93,23 @@ const (
 
 var (
     msbByteVal byte = byte( 128 )
-    v4MaskMsb [ net.IPv4len ]byte = [ net.IPv4len ]byte{ msbByteVal, 0, 0, 0 }
-    v6MaskMsg [ net.IPv6len ]byte = [ net.IPv6len ]byte{ msbByteVal, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
 )
 
-func ( t *tree )Insertv4( saddr string, value interface{ } )( OpResult, error ) {
+func ( t *tree )Insert( key [ ]byte, mask [ ]byte, keyLen int, value interface{ } )( OpResult, error ) {
     if nil == t {
         return Err, fmt.Errorf( "invalid prefix tree" )
     }
 
-    match   := v4MaskMsb
-    maskIdx := 0
-
-    addr, mask, err := getv4Addr( saddr )
-    if nil != err {
-        return Err, err
+    if keyLen <= 0 {
+        return Err, fmt.Errorf( "invalid key length %d", keyLen )
     }
 
-    t.wlock( )    
+    match   := make( [ ]byte, keyLen )
+    maskIdx := 0
+
+    match[ maskIdx ] = msbByteVal
+
+    t.wlock( )
     defer func( ) {
         t.unlock( )
     }( )
@@ -120,7 +118,7 @@ func ( t *tree )Insertv4( saddr string, value interface{ } )( OpResult, error ) 
     next := t.root
 
     for 1 == match[ maskIdx ] & mask[ maskIdx ] {
-        if 1 == addr[ maskIdx ] & match[ maskIdx ] {
+        if 1 == key[ maskIdx ] & match[ maskIdx ] {
             next = node.right
         } else {
             next = node.left
@@ -134,7 +132,7 @@ func ( t *tree )Insertv4( saddr string, value interface{ } )( OpResult, error ) 
 
         if 1 == match[ maskIdx ] {
             maskIdx++
-            if net.IPv4len == maskIdx {
+            if keyLen == maskIdx {
                 break
             }
 
@@ -155,16 +153,16 @@ func ( t *tree )Insertv4( saddr string, value interface{ } )( OpResult, error ) 
         return Ok, nil
     }
 
-    if net.IPv4len == maskIdx {
-        return Err, fmt.Errorf( "failed to add %s", saddr )
+    if keyLen == maskIdx {
+        return Err, fmt.Errorf( "insert failed" )
     }
 
-    for 1 == addr[ maskIdx ] & mask[ maskIdx ] {
+    for 1 == key[ maskIdx ] & mask[ maskIdx ] {
         next = newNode( )
 
         next.parent = node
 
-        if 1 == addr[ maskIdx ] & match[ maskIdx ] {
+        if 1 == key[ maskIdx ] & match[ maskIdx ] {
             node.right = next
         } else {
             node.left = next
@@ -174,7 +172,7 @@ func ( t *tree )Insertv4( saddr string, value interface{ } )( OpResult, error ) 
 
         if 1 == match[ maskIdx ] {
             maskIdx++
-            if net.IPv4len == maskIdx {
+            if keyLen == maskIdx {
                 break
             }
 
@@ -191,17 +189,22 @@ func ( t *tree )Insertv4( saddr string, value interface{ } )( OpResult, error ) 
 }
 
 // Caller must lock
-func ( t *tree )findv4( addr net.IP, mask net.IPMask, mType MatchType )( *treeNode, OpResult, error ) {
+func ( t *tree )find( key [ ]byte, mask [ ]byte, keyLen int, mType MatchType )( *treeNode, OpResult, error ) {
     if nil == t {
         return nil, Err, fmt.Errorf( "invalid prefix tree" )
     }
 
-    match   := v4MaskMsb
+    if keyLen <= 0 {
+        return nil, Err, fmt.Errorf( "invalid key length %d", keyLen )
+    }
+
+    match   := make( [ ]byte, keyLen )
     maskIdx := 0
 
-    node := t.root
+    match[ maskIdx ] = msbByteVal
 
-    ret := Match
+    node := t.root
+    ret  := Match
 
     for nil != node && 1 == match[ maskIdx ] & mask[ maskIdx ] {
         if Partial == mType && node.isTerminal( ) {
@@ -209,7 +212,7 @@ func ( t *tree )findv4( addr net.IP, mask net.IPMask, mType MatchType )( *treeNo
             break
         }
 
-        if 1 == addr[ maskIdx ] & match[ maskIdx ] {
+        if 1 == key[ maskIdx ] & match[ maskIdx ] {
             node = node.right
         } else {
             node = node.left
@@ -217,7 +220,7 @@ func ( t *tree )findv4( addr net.IP, mask net.IPMask, mType MatchType )( *treeNo
 
         if 1 == match[ maskIdx ] {
             maskIdx++
-            if net.IPv4len == maskIdx {
+            if keyLen == maskIdx {
                 break
             }
 
@@ -234,14 +237,9 @@ func ( t *tree )findv4( addr net.IP, mask net.IPMask, mType MatchType )( *treeNo
     return nil, NoMatch, fmt.Errorf( "not found" )
 }
 
-func ( t *tree )Deletev4( saddr string )( OpResult, interface{ }, error ) {
+func ( t *tree )Delete( key [ ]byte, mask [ ]byte, keyLen int )( OpResult, interface{ }, error ) {
     if nil == t {
         return Err, nil, fmt.Errorf( "invalid prefix tree" )
-    }
-
-    addr, mask, err := getv4Addr( saddr )
-    if nil != err {
-        return Err, nil, err
     }
 
     t.wlock( )
@@ -249,7 +247,7 @@ func ( t *tree )Deletev4( saddr string )( OpResult, interface{ }, error ) {
         t.unlock( )
     }( )
 
-    node, result, err := t.findv4( addr, mask, Exact )
+    node, result, err := t.find( key, mask, keyLen, Exact )
     if nil != err || Match != result {
         return Err, nil, err
     }
@@ -281,14 +279,9 @@ func ( t *tree )Deletev4( saddr string )( OpResult, interface{ }, error ) {
     return Match, node.value, nil
 }
 
-func ( t *tree )Searchv4( saddr string, mType MatchType )( OpResult, interface{ }, error ) {
+func ( t *tree )Search( key [ ]byte, mask [ ]byte, keyLen int, mType MatchType )( OpResult, interface{ }, error ) {
     if nil == t {
         return Err, nil, fmt.Errorf( "invalid prefix tree" )
-    }
-
-    addr, mask, err := getv4Addr( saddr )
-    if nil != err {
-        return Err, nil, err
     }
 
     t.rlock( )
@@ -296,7 +289,7 @@ func ( t *tree )Searchv4( saddr string, mType MatchType )( OpResult, interface{ 
         t.runlock( )
     }( )
 
-    node, result, err := t.findv4( addr, mask, mType )
+    node, result, err := t.find( key, mask, keyLen, mType )
     if nil != err || Match != result {
         return Err, nil, err
     }
@@ -307,4 +300,12 @@ func ( t *tree )Searchv4( saddr string, mType MatchType )( OpResult, interface{ 
     }
 
     return Match, node.value, nil
+}
+
+func (t *tree )SearchExact( key [ ]byte, mask [ ]byte, keyLen int )( OpResult, interface{ }, error ) {
+    return t.Search( key, mask, keyLen, Exact )
+}
+
+func (t *tree )SearchPartial( key [ ]byte, mask [ ]byte, keyLen int )( OpResult, interface{ }, error ) {
+    return t.Search( key, mask, keyLen, Partial )
 }
