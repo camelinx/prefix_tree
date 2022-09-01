@@ -37,7 +37,7 @@ func ( t *tree )Insertv4( saddr string, value interface{ } )( OpResult, error ) 
         return Err, err
     }
 
-    return t.Insert( addr, mask, net.IPv4len, value )
+    return t.Insert( addr.To4( ), mask, net.IPv4len, value )
 }
 
 func ( t *tree )Deletev4( saddr string )( OpResult, interface{ }, error ) {
@@ -46,7 +46,7 @@ func ( t *tree )Deletev4( saddr string )( OpResult, interface{ }, error ) {
         return Err, nil, err
     }
 
-    return t.Delete( addr, mask, net.IPv4len )
+    return t.Delete( addr.To4( ), mask, net.IPv4len )
 }
 
 func ( t *tree )Searchv4( saddr string )( OpResult, interface{ }, error ) {
@@ -55,7 +55,7 @@ func ( t *tree )Searchv4( saddr string )( OpResult, interface{ }, error ) {
         return Err, nil, err
     }
 
-    return t.SearchPartial( addr, mask, net.IPv4len )
+    return t.SearchPartial( addr.To4( ), mask, net.IPv4len )
 }
 
 func ( t *tree )Searchv4Exact( saddr string )( OpResult, interface{ }, error ) {
@@ -64,5 +64,5 @@ func ( t *tree )Searchv4Exact( saddr string )( OpResult, interface{ }, error ) {
         return Err, nil, err
     }
 
-    return t.SearchExact( addr, mask, net.IPv4len )
+    return t.SearchExact( addr.To4( ), mask, net.IPv4len )
 }
