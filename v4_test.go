@@ -4,6 +4,8 @@ import (
     "testing"
     "net"
     "fmt"
+    "time"
+    "math/rand"
 )
 
 const (
@@ -24,6 +26,8 @@ func validatev4Addr( t *testing.T, saddr string, exip string, exmask string, neg
 }
 
 func TestV4( t *testing.T )( ) {
+    rand.Seed( time.Now( ).UnixNano( ) )
+
     validatev4Addr( t, "", "", "", true )
     validatev4Addr( t, "192.168.128.40/33", "", "", true )
     validatev4Addr( t, "256.168.128.40/32", "", "", true )

@@ -2,6 +2,8 @@ package prefix_tree
 
 import (
     "testing"
+    "time"
+    "math/rand"
 )
 
 const (
@@ -125,6 +127,7 @@ func testValidateIpv4Address( t *testing.T ) {
 }
 
 func TestIpv4Gen( t *testing.T ) {
+    rand.Seed( time.Now( ).UnixNano( ) )
     testInitIpv4Block( t )
     testValidateIpv4Address( t )
 }
