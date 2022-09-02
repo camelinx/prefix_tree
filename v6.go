@@ -31,7 +31,7 @@ func getv6Addr( saddr string )( net.IP, net.IPMask, error ) {
     return nil, nil, fmt.Errorf( "invalid v6 address %s", saddr )
 }
 
-func ( t *tree )Insertv6( saddr string, value interface{ } )( OpResult, error ) {
+func ( t *Tree )Insertv6( saddr string, value interface{ } )( OpResult, error ) {
     addr, mask, err := getv6Addr( saddr )
     if nil != err {
         return Err, err
@@ -40,7 +40,7 @@ func ( t *tree )Insertv6( saddr string, value interface{ } )( OpResult, error ) 
     return t.Insert( addr, mask, net.IPv6len, value )
 }
 
-func ( t *tree )Deletev6( saddr string )( OpResult, interface{ }, error ) {
+func ( t *Tree )Deletev6( saddr string )( OpResult, interface{ }, error ) {
     addr, mask, err := getv6Addr( saddr )
     if nil != err {
         return Err, nil, err
@@ -49,7 +49,7 @@ func ( t *tree )Deletev6( saddr string )( OpResult, interface{ }, error ) {
     return t.Delete( addr, mask, net.IPv6len )
 }
 
-func ( t *tree )Searchv6( saddr string )( OpResult, interface{ }, error ) {
+func ( t *Tree )Searchv6( saddr string )( OpResult, interface{ }, error ) {
     addr, mask, err := getv6Addr( saddr )
     if nil != err {
         return Err, nil, err
@@ -58,7 +58,7 @@ func ( t *tree )Searchv6( saddr string )( OpResult, interface{ }, error ) {
     return t.SearchPartial( addr, mask, net.IPv6len )
 }
 
-func ( t *tree )Searchv6Exact( saddr string )( OpResult, interface{ }, error ) {
+func ( t *Tree )Searchv6Exact( saddr string )( OpResult, interface{ }, error ) {
     addr, mask, err := getv6Addr( saddr )
     if nil != err {
         return Err, nil, err

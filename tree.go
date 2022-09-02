@@ -9,7 +9,7 @@ type ReadUnlockFn func( interface{ } )( )
 type WriteLockFn func( interface{ } )( )
 type UnlockFn func( interface{ } )( )
 
-type tree struct {
+type Tree struct {
     root        *treeNode
 
     Nodes        uint64
@@ -21,8 +21,8 @@ type tree struct {
     unlockFn     UnlockFn
 }
 
-func Init( )( *tree ) {
-    return &tree{
+func Init( )( *Tree ) {
+    return &Tree{
         root: &treeNode{
             parent: nil,
         },
@@ -31,7 +31,7 @@ func Init( )( *tree ) {
     }
 }
 
-func ( t *tree )SetLockHandlers( lockCtx interface{ }, rlockFn ReadLockFn, runlockFn ReadUnlockFn, wlockFn WriteLockFn, unlockFn UnlockFn )( ) {
+func ( t *Tree )SetLockHandlers( lockCtx interface{ }, rlockFn ReadLockFn, runlockFn ReadUnlockFn, wlockFn WriteLockFn, unlockFn UnlockFn )( ) {
     if nil != t {
         t.lockCtx   = lockCtx
         t.rlockFn   = rlockFn
@@ -41,7 +41,7 @@ func ( t *tree )SetLockHandlers( lockCtx interface{ }, rlockFn ReadLockFn, runlo
     }
 }
 
-func ( t *tree )rlock( )( ) {
+func ( t *Tree )rlock( )( ) {
     if nil == t || nil == t.rlockFn {
         return
     }
@@ -49,7 +49,7 @@ func ( t *tree )rlock( )( ) {
     t.rlockFn( t.lockCtx )
 }
 
-func ( t *tree )runlock( )( ) {
+func ( t *Tree )runlock( )( ) {
     if nil == t || nil == t.runlockFn {
         return
     }
@@ -57,7 +57,7 @@ func ( t *tree )runlock( )( ) {
     t.runlockFn( t.lockCtx )
 }
 
-func ( t *tree )wlock( )( ) {
+func ( t *Tree )wlock( )( ) {
     if nil == t || nil == t.wlockFn {
         return
     }
@@ -65,7 +65,7 @@ func ( t *tree )wlock( )( ) {
     t.wlockFn( t.lockCtx )
 }
 
-func ( t *tree )unlock( )( ) {
+func ( t *Tree )unlock( )( ) {
     if nil == t || nil == t.unlockFn {
         return
     }
@@ -95,7 +95,7 @@ var (
     msbByteVal byte = byte( 128 )
 )
 
-func ( t *tree )Insert( key [ ]byte, mask [ ]byte, keyLen int, value interface{ } )( OpResult, error ) {
+func ( t *Tree )Insert( key [ ]byte, mask [ ]byte, keyLen int, value interface{ } )( OpResult, error ) {
     if nil == t {
         return Err, fmt.Errorf( "invalid prefix tree" )
     }
@@ -189,7 +189,7 @@ func ( t *tree )Insert( key [ ]byte, mask [ ]byte, keyLen int, value interface{ 
 }
 
 // Caller must lock
-func ( t *tree )find( key [ ]byte, mask [ ]byte, keyLen int, mType MatchType )( *treeNode, OpResult, error ) {
+func ( t *Tree )find( key [ ]byte, mask [ ]byte, keyLen int, mType MatchType )( *treeNode, OpResult, error ) {
     if nil == t {
         return nil, Err, fmt.Errorf( "invalid prefix tree" )
     }
@@ -237,7 +237,7 @@ func ( t *tree )find( key [ ]byte, mask [ ]byte, keyLen int, mType MatchType )( 
     return nil, NoMatch, fmt.Errorf( "not found" )
 }
 
-func ( t *tree )Delete( key [ ]byte, mask [ ]byte, keyLen int )( OpResult, interface{ }, error ) {
+func ( t *Tree )Delete( key [ ]byte, mask [ ]byte, keyLen int )( OpResult, interface{ }, error ) {
     if nil == t {
         return Err, nil, fmt.Errorf( "invalid prefix tree" )
     }
@@ -281,7 +281,7 @@ func ( t *tree )Delete( key [ ]byte, mask [ ]byte, keyLen int )( OpResult, inter
     return Match, value, nil
 }
 
-func ( t *tree )Search( key [ ]byte, mask [ ]byte, keyLen int, mType MatchType )( OpResult, interface{ }, error ) {
+func ( t *Tree )Search( key [ ]byte, mask [ ]byte, keyLen int, mType MatchType )( OpResult, interface{ }, error ) {
     if nil == t {
         return Err, nil, fmt.Errorf( "invalid prefix tree" )
     }
@@ -304,10 +304,10 @@ func ( t *tree )Search( key [ ]byte, mask [ ]byte, keyLen int, mType MatchType )
     return Match, node.value, nil
 }
 
-func (t *tree )SearchExact( key [ ]byte, mask [ ]byte, keyLen int )( OpResult, interface{ }, error ) {
+func (t *Tree )SearchExact( key [ ]byte, mask [ ]byte, keyLen int )( OpResult, interface{ }, error ) {
     return t.Search( key, mask, keyLen, Exact )
 }
 
-func (t *tree )SearchPartial( key [ ]byte, mask [ ]byte, keyLen int )( OpResult, interface{ }, error ) {
+func (t *Tree )SearchPartial( key [ ]byte, mask [ ]byte, keyLen int )( OpResult, interface{ }, error ) {
     return t.Search( key, mask, keyLen, Partial )
 }

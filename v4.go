@@ -31,7 +31,7 @@ func getv4Addr( saddr string )( net.IP, net.IPMask, error ) {
     return nil, nil, fmt.Errorf( "invalid v4 address %s", saddr )
 }
 
-func ( t *tree )Insertv4( saddr string, value interface{ } )( OpResult, error ) {
+func ( t *Tree )Insertv4( saddr string, value interface{ } )( OpResult, error ) {
     addr, mask, err := getv4Addr( saddr )
     if nil != err {
         return Err, err
@@ -40,7 +40,7 @@ func ( t *tree )Insertv4( saddr string, value interface{ } )( OpResult, error ) 
     return t.Insert( addr.To4( ), mask, net.IPv4len, value )
 }
 
-func ( t *tree )Deletev4( saddr string )( OpResult, interface{ }, error ) {
+func ( t *Tree )Deletev4( saddr string )( OpResult, interface{ }, error ) {
     addr, mask, err := getv4Addr( saddr )
     if nil != err {
         return Err, nil, err
@@ -49,7 +49,7 @@ func ( t *tree )Deletev4( saddr string )( OpResult, interface{ }, error ) {
     return t.Delete( addr.To4( ), mask, net.IPv4len )
 }
 
-func ( t *tree )Searchv4( saddr string )( OpResult, interface{ }, error ) {
+func ( t *Tree )Searchv4( saddr string )( OpResult, interface{ }, error ) {
     addr, mask, err := getv4Addr( saddr )
     if nil != err {
         return Err, nil, err
@@ -58,7 +58,7 @@ func ( t *tree )Searchv4( saddr string )( OpResult, interface{ }, error ) {
     return t.SearchPartial( addr.To4( ), mask, net.IPv4len )
 }
 
-func ( t *tree )Searchv4Exact( saddr string )( OpResult, interface{ }, error ) {
+func ( t *Tree )Searchv4Exact( saddr string )( OpResult, interface{ }, error ) {
     addr, mask, err := getv4Addr( saddr )
     if nil != err {
         return Err, nil, err
