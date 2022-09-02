@@ -262,6 +262,8 @@ func ( t *tree )Delete( key [ ]byte, mask [ ]byte, keyLen int )( OpResult, inter
         return Match, node.value, nil
     }
 
+    value := node.value
+
     for true {
         if node == node.parent.right {
             node.parent.right = nil
@@ -276,7 +278,7 @@ func ( t *tree )Delete( key [ ]byte, mask [ ]byte, keyLen int )( OpResult, inter
         }
     }
 
-    return Match, node.value, nil
+    return Match, value, nil
 }
 
 func ( t *tree )Search( key [ ]byte, mask [ ]byte, keyLen int, mType MatchType )( OpResult, interface{ }, error ) {
