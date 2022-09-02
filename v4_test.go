@@ -145,7 +145,6 @@ func extendedV4Tests( t *testing.T )( ) {
 
     for i := 0; i < 255; i++ {
         for j := 0; j < 255; j++ {
-                //addr := fmt.Sprintf( "%s.%d.%d/32", prefix, i, j )
             for m := 32; m > 24; m-- {
                 cidr := fmt.Sprintf( "%s.%d.%d/%d", prefix, i, j, m )
 
