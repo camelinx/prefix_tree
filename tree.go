@@ -12,7 +12,7 @@ type UnlockFn func( interface{ } )( )
 type Tree struct {
     root        *treeNode
 
-    Nodes        uint64
+    NumNodes     uint64
 
     lockCtx      interface{ }
     rlockFn      ReadLockFn
@@ -71,6 +71,18 @@ func ( t *Tree )unlock( )( ) {
     }
 
     t.unlockFn( t.lockCtx )
+}
+
+func ( t *Tree )incrNumNodes( )( ) {
+    if nil != t {
+        t.NumNodes++
+    }
+}
+
+func ( t *Tree )decrNumNodes( )( ) {
+    if nil != t && t.NumNodes > 0 {
+        t.NumNodes--
+    }
 }
 
 type OpResult int
@@ -150,6 +162,8 @@ func ( t *Tree )Insert( key [ ]byte, mask [ ]byte, keyLen int, value interface{ 
         node.value = value
         node.markTerminal( )
 
+        t.incrNumNodes( )
+
         return Ok, nil
     }
 
@@ -184,6 +198,8 @@ func ( t *Tree )Insert( key [ ]byte, mask [ ]byte, keyLen int, value interface{ 
 
     node.value = value
     node.markTerminal( )
+
+    t.incrNumNodes( )
 
     return Ok, nil
 }
@@ -259,6 +275,9 @@ func ( t *Tree )Delete( key [ ]byte, mask [ ]byte, keyLen int )( OpResult, inter
 
     if !node.isLeaf( ) {
         node.unmarkTerminal( )
+
+        t.decrNumNodes( )
+
         return Match, node.value, nil
     }
 
@@ -277,6 +296,8 @@ func ( t *Tree )Delete( key [ ]byte, mask [ ]byte, keyLen int )( OpResult, inter
             break
         }
     }
+
+    t.decrNumNodes( )
 
     return Match, value, nil
 }
