@@ -29,4 +29,5 @@ type AddrTree interface {
     Delete( string )( OpResult, interface{ }, error )
     Search( string )( OpResult, interface{ }, error )
     SearchExact( string )( OpResult, interface{ }, error )
+    GetNodesCount( )( uint64 )
 }

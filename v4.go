@@ -76,3 +76,7 @@ func ( v4t *V4Tree )SearchExact( saddr string )( OpResult, interface{ }, error )
 
     return v4t.tree.SearchExact( addr.To4( ), mask, net.IPv4len )
 }
+
+func ( v4t *V4Tree )GetNodesCount( )( uint64 ) {
+    return v4t.tree.NumNodes
+}

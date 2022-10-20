@@ -76,3 +76,7 @@ func ( v6t *V6Tree )SearchExact( saddr string )( OpResult, interface{ }, error )
 
     return v6t.tree.SearchExact( addr, mask, net.IPv6len )
 }
+
+func ( v6t *V6Tree )GetNodesCount( )( uint64 ) {
+    return v6t.tree.NumNodes
+}
