@@ -13,9 +13,9 @@ const (
 )
 
 func validatev4Addr( t *testing.T, saddr string, exip string, exmask string, negate bool )( ) {
-    v4 := new( v4 )
+    v4t := NewV4Tree( )
 
-    nip, nmask, err := v4.testgetv4Addr( saddr )
+    nip, nmask, err := v4t.testgetv4Addr( saddr )
     if ( nil == err ) == negate {
         t.Fatalf( "getv4Addr: error validating %s and negate %v", saddr, negate )
     }
@@ -34,7 +34,7 @@ func basicV4Tests( t *testing.T )( ) {
 }
 
 func randomV4Tests( t *testing.T )( ) {
-    tree := Init( )
+    v4t := NewV4Tree( )
 
     for class := ipv4AddrClassMin + 1; class < ipv4AddrClassMax; class++ {
         v4gen := newIpv4Generator( )
@@ -62,47 +62,47 @@ func randomV4Tests( t *testing.T )( ) {
         }
 
         for i := 0; i < v4gen.count; i++ {
-            res, err := tree.Insertv4( v4gen.block[ i ], nil )
+            res, err := v4t.Insert( v4gen.block[ i ], nil )
             if err != nil || res != Ok {
                 t.Fatalf( "Failed to insert %s", v4gen.block[ i ] )
             }
 
-            res, _, err = tree.Searchv4( v4gen.block[ i ] )
+            res, _, err = v4t.Search( v4gen.block[ i ] )
             if err != nil || res != Match {
                 t.Fatalf( "Failed to find %s", v4gen.block[ i ] )
             }
 
-            res, _, err = tree.Searchv4Exact( v4gen.block[ i ] + "/32" )
+            res, _, err = v4t.SearchExact( v4gen.block[ i ] + "/32" )
             if err != nil || res != Match {
                 t.Fatalf( "Failed to find (exact) %s", v4gen.block[ i ] + "/32" )
             }
 
-            res, err = tree.Insertv4( v4gen.block[ i ] + "/32", nil )
+            res, err = v4t.Insert( v4gen.block[ i ] + "/32", nil )
             if err != nil || res != Dup {
                 t.Fatalf( "Failed to recognize %s as duplicate", v4gen.block[ i ] + "/32" )
             }
 
-            res, err = tree.Insertv4( v4gen.block[ i ], nil )
+            res, err = v4t.Insert( v4gen.block[ i ], nil )
             if err != nil || res != Dup {
                 t.Fatalf( "Failed to recognize %s as duplicate", v4gen.block[ i ] )
             }
 
-            res, _, err = tree.Deletev4( v4gen.block[ i ] + "/32" )
+            res, _, err = v4t.Delete( v4gen.block[ i ] + "/32" )
             if err != nil || res != Match {
                 t.Fatalf( "Failed to delete %s", v4gen.block[ i ] + "/32" )
             }
 
-            res, _, err = tree.Searchv4( v4gen.block[ i ] + "/32" )
+            res, _, err = v4t.Search( v4gen.block[ i ] + "/32" )
             if nil == err || res != Err {
                 t.Fatalf( "Found non existent key %s", v4gen.block[ i ] + "/32" )
             }
 
-            res, _, err = tree.Searchv4Exact( v4gen.block[ i ] )
+            res, _, err = v4t.SearchExact( v4gen.block[ i ] )
             if nil == err || res != Err {
                 t.Fatalf( "Found (exact) non existent key %s", v4gen.block[ i ] )
             }
 
-            res, _, err = tree.Deletev4( v4gen.block[ i ] )
+            res, _, err = v4t.Delete( v4gen.block[ i ] )
             if nil == err || res != Err {
                 t.Fatalf( "Deleted non existent key %s", v4gen.block[ i ] )
             }
@@ -111,7 +111,7 @@ func randomV4Tests( t *testing.T )( ) {
 }
 
 func extendedV4Tests( t *testing.T )( ) {
-    tree := Init( )
+    v4t := NewV4Tree( )
 
     elemsMap := make( map[ string ]bool )
 
@@ -127,14 +127,14 @@ func extendedV4Tests( t *testing.T )( ) {
                 value := fmt.Sprintf( "%s/%s", ip.String( ), mask.String( ) )
 
                 if _, exists := elemsMap[ value ]; !exists {
-                    res, err := tree.Insertv4( cidr, value )
+                    res, err := v4t.Insert( cidr, value )
                     if err != nil || res != Ok {
                         t.Fatalf( "Failed to insert %s, result = %v, %v", cidr, res, err )
                     }
 
                     elemsMap[ value ] = true
                 } else {
-                    res, err := tree.Insertv4( cidr, value )
+                    res, err := v4t.Insert( cidr, value )
                     if err != nil || res != Dup {
                         t.Fatalf( "Failed to identify duplicate %s, result = %v, %v", cidr, res, err )
                     }
@@ -156,7 +156,7 @@ func extendedV4Tests( t *testing.T )( ) {
                     continue
                 }
 
-                res, saved, err := tree.Searchv4Exact( cidr )
+                res, saved, err := v4t.SearchExact( cidr )
                 if nil == err && Match == res {
                     if saved.( string ) != value {
                         t.Fatalf( "Search failed for %s, returned %s, expected %s", cidr, saved.( string ), value )
@@ -165,7 +165,7 @@ func extendedV4Tests( t *testing.T )( ) {
                     t.Fatalf( "Search failed for %s, %v/%v", cidr, res, err )
                 }
 
-                res, saved, err = tree.Deletev4( cidr )
+                res, saved, err = v4t.Delete( cidr )
                 if nil == err && Match == res {
                     if saved.( string ) != value {
                         t.Fatalf( "Delete failed for %s, returned %s, expected %s", cidr, saved.( string ), value )

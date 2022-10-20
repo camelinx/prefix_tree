@@ -4,11 +4,6 @@ import (
     "fmt"
 )
 
-type ReadLockFn func( interface{ } )( )
-type ReadUnlockFn func( interface{ } )( )
-type WriteLockFn func( interface{ } )( )
-type UnlockFn func( interface{ } )( )
-
 type Tree struct {
     root        *treeNode
 
@@ -21,7 +16,7 @@ type Tree struct {
     unlockFn     UnlockFn
 }
 
-func Init( )( *Tree ) {
+func NewTree( )( *Tree ) {
     return &Tree{
         root: &treeNode{
             parent: nil,
@@ -84,24 +79,6 @@ func ( t *Tree )decrNumNodes( )( ) {
         t.NumNodes--
     }
 }
-
-type OpResult int
-
-const (
-    Err   OpResult = iota
-    Ok
-    Dup
-    Match
-    PartialMatch
-    NoMatch
-)
-
-type MatchType int
-
-const (
-    Exact   MatchType = iota
-    Partial
-)
 
 var (
     msbByteVal byte = byte( 128 )

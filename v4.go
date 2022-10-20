@@ -5,11 +5,11 @@ import (
     "net"
 )
 
-type v4 struct {
-    b bool
+type V4Tree struct {
+    tree   *Tree
 }
 
-func ( v4 *v4 )testgetv4Addr( saddr string )( net.IP, net.IPMask, error ) {
+func ( v4t *V4Tree )testgetv4Addr( saddr string )( net.IP, net.IPMask, error ) {
     return getv4Addr( saddr )
 }
 
@@ -31,38 +31,48 @@ func getv4Addr( saddr string )( net.IP, net.IPMask, error ) {
     return nil, nil, fmt.Errorf( "invalid v4 address %s", saddr )
 }
 
-func ( t *Tree )Insertv4( saddr string, value interface{ } )( OpResult, error ) {
+func NewV4Tree( )( *V4Tree ) {
+    return &V4Tree{
+        tree:   NewTree( ),
+    }
+}
+
+func ( v4t *V4Tree )SetLockHandlers( lockCtx interface{ }, rlockFn ReadLockFn, runlockFn ReadUnlockFn, wlockFn WriteLockFn, unlockFn UnlockFn )( ) {
+    v4t.tree.SetLockHandlers( lockCtx, rlockFn, runlockFn, wlockFn, unlockFn )
+}
+
+func ( v4t *V4Tree )Insert( saddr string, value interface{ } )( OpResult, error ) {
     addr, mask, err := getv4Addr( saddr )
     if nil != err {
         return Err, err
     }
 
-    return t.Insert( addr.To4( ), mask, net.IPv4len, value )
+    return v4t.tree.Insert( addr.To4( ), mask, net.IPv4len, value )
 }
 
-func ( t *Tree )Deletev4( saddr string )( OpResult, interface{ }, error ) {
+func ( v4t *V4Tree )Delete( saddr string )( OpResult, interface{ }, error ) {
     addr, mask, err := getv4Addr( saddr )
     if nil != err {
         return Err, nil, err
     }
 
-    return t.Delete( addr.To4( ), mask, net.IPv4len )
+    return v4t.tree.Delete( addr.To4( ), mask, net.IPv4len )
 }
 
-func ( t *Tree )Searchv4( saddr string )( OpResult, interface{ }, error ) {
+func ( v4t *V4Tree )Search( saddr string )( OpResult, interface{ }, error ) {
     addr, mask, err := getv4Addr( saddr )
     if nil != err {
         return Err, nil, err
     }
 
-    return t.SearchPartial( addr.To4( ), mask, net.IPv4len )
+    return v4t.tree.SearchPartial( addr.To4( ), mask, net.IPv4len )
 }
 
-func ( t *Tree )Searchv4Exact( saddr string )( OpResult, interface{ }, error ) {
+func ( v4t *V4Tree )SearchExact( saddr string )( OpResult, interface{ }, error ) {
     addr, mask, err := getv4Addr( saddr )
     if nil != err {
         return Err, nil, err
     }
 
-    return t.SearchExact( addr.To4( ), mask, net.IPv4len )
+    return v4t.tree.SearchExact( addr.To4( ), mask, net.IPv4len )
 }

@@ -6,9 +6,9 @@ import (
 )
 
 func validatev6Addr( t *testing.T, saddr string, exip string, exmask string, negate bool )( ) {
-    v6 := new( v6 )
+    v6t := NewV6Tree( )
 
-    nip, nmask, err := v6.testgetv6Addr( saddr )
+    nip, nmask, err := v6t.testgetv6Addr( saddr )
     if ( nil == err ) == negate {
         t.Fatalf( "getv6Addr: error validating %s and negate %v", saddr, negate )
     }
