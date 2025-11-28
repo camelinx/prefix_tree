@@ -5,13 +5,13 @@ import (
 )
 
 func TestTreeNode(t *testing.T) {
-	node := newNode()
-
+	node := rootNode()
 	if !node.isRoot() {
 		t.Fatalf("isRoot: failed to recognize root node")
 	}
 
-	node.parent = newNode()
+	node = newNode()
+	node.root = false
 	if node.isRoot() {
 		t.Fatalf("isRoot: incorrectly identified node as root")
 	}

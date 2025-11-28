@@ -1,9 +1,14 @@
 package prefix_tree
 
+import (
+	"context"
+	"errors"
+)
+
 type OpResult int
 
 const (
-	Err OpResult = iota
+	Error OpResult = iota
 	Ok
 	Dup
 	Match
@@ -18,16 +23,23 @@ const (
 	Partial
 )
 
-type ReadLockFn func(interface{})
-type ReadUnlockFn func(interface{})
-type WriteLockFn func(interface{})
-type UnlockFn func(interface{})
+type ReadLockFn func(context.Context)
+type ReadUnlockFn func(context.Context)
+type WriteLockFn func(context.Context)
+type UnlockFn func(context.Context)
 
 type AddrTree interface {
-	SetLockHandlers(interface{}, ReadLockFn, ReadUnlockFn, WriteLockFn, UnlockFn)
-	Insert(string, interface{}) (OpResult, error)
-	Delete(string) (OpResult, interface{}, error)
-	Search(string) (OpResult, interface{}, error)
-	SearchExact(string) (OpResult, interface{}, error)
+	SetLockHandlers(ReadLockFn, ReadUnlockFn, WriteLockFn, UnlockFn)
+	Insert(context.Context, string, interface{}) (OpResult, error)
+	Delete(context.Context, string) (OpResult, interface{}, error)
+	Search(context.Context, string) (OpResult, interface{}, error)
+	SearchExact(context.Context, string) (OpResult, interface{}, error)
 	GetNodesCount() uint64
 }
+
+var (
+	ErrInvalidPrefixTree = errors.New("invalid prefix tree")
+	ErrInvalidKeyMask    = errors.New("invalid key/mask")
+	ErrInsertFailed      = errors.New("insert failed")
+	ErrKeyNotFound       = errors.New("key not found")
+)

@@ -1,6 +1,7 @@
 package prefix_tree
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"net"
@@ -59,49 +60,50 @@ func randomV4Tests(t *testing.T) {
 			}
 		}
 
+		ctx := context.Background()
 		for i := 0; i < v4gen.count; i++ {
-			res, err := v4t.Insert(v4gen.block[i], nil)
+			res, err := v4t.Insert(ctx, v4gen.block[i], nil)
 			if err != nil || res != Ok {
 				t.Fatalf("Failed to insert %s", v4gen.block[i])
 			}
 
-			res, _, err = v4t.Search(v4gen.block[i])
+			res, _, err = v4t.Search(ctx, v4gen.block[i])
 			if err != nil || res != Match {
 				t.Fatalf("Failed to find %s", v4gen.block[i])
 			}
 
-			res, _, err = v4t.SearchExact(v4gen.block[i] + "/32")
+			res, _, err = v4t.SearchExact(ctx, v4gen.block[i]+"/32")
 			if err != nil || res != Match {
 				t.Fatalf("Failed to find (exact) %s", v4gen.block[i]+"/32")
 			}
 
-			res, err = v4t.Insert(v4gen.block[i]+"/32", nil)
+			res, err = v4t.Insert(ctx, v4gen.block[i]+"/32", nil)
 			if err != nil || res != Dup {
 				t.Fatalf("Failed to recognize %s as duplicate", v4gen.block[i]+"/32")
 			}
 
-			res, err = v4t.Insert(v4gen.block[i], nil)
+			res, err = v4t.Insert(ctx, v4gen.block[i], nil)
 			if err != nil || res != Dup {
 				t.Fatalf("Failed to recognize %s as duplicate", v4gen.block[i])
 			}
 
-			res, _, err = v4t.Delete(v4gen.block[i] + "/32")
+			res, _, err = v4t.Delete(ctx, v4gen.block[i]+"/32")
 			if err != nil || res != Match {
 				t.Fatalf("Failed to delete %s", v4gen.block[i]+"/32")
 			}
 
-			res, _, err = v4t.Search(v4gen.block[i] + "/32")
-			if nil == err || res != Err {
+			res, _, err = v4t.Search(ctx, v4gen.block[i]+"/32")
+			if nil == err || res != Error {
 				t.Fatalf("Found non existent key %s", v4gen.block[i]+"/32")
 			}
 
-			res, _, err = v4t.SearchExact(v4gen.block[i])
-			if nil == err || res != Err {
+			res, _, err = v4t.SearchExact(ctx, v4gen.block[i])
+			if nil == err || res != Error {
 				t.Fatalf("Found (exact) non existent key %s", v4gen.block[i])
 			}
 
-			res, _, err = v4t.Delete(v4gen.block[i])
-			if nil == err || res != Err {
+			res, _, err = v4t.Delete(ctx, v4gen.block[i])
+			if nil == err || res != Error {
 				t.Fatalf("Deleted non existent key %s", v4gen.block[i])
 			}
 		}
@@ -115,6 +117,7 @@ func extendedV4Tests(t *testing.T) {
 
 	prefix := "192.168"
 
+	ctx := context.Background()
 	for i := 0; i < 255; i++ {
 		for j := 0; j < 255; j++ {
 			for m := 32; m > 24; m-- {
@@ -125,14 +128,14 @@ func extendedV4Tests(t *testing.T) {
 				value := fmt.Sprintf("%s/%s", ip.String(), mask.String())
 
 				if _, exists := elemsMap[value]; !exists {
-					res, err := v4t.Insert(cidr, value)
+					res, err := v4t.Insert(ctx, cidr, value)
 					if err != nil || res != Ok {
 						t.Fatalf("Failed to insert %s, result = %v, %v", cidr, res, err)
 					}
 
 					elemsMap[value] = true
 				} else {
-					res, err := v4t.Insert(cidr, value)
+					res, err := v4t.Insert(ctx, cidr, value)
 					if err != nil || res != Dup {
 						t.Fatalf("Failed to identify duplicate %s, result = %v, %v", cidr, res, err)
 					}
@@ -154,7 +157,7 @@ func extendedV4Tests(t *testing.T) {
 					continue
 				}
 
-				res, saved, err := v4t.SearchExact(cidr)
+				res, saved, err := v4t.SearchExact(ctx, cidr)
 				if nil == err && Match == res {
 					if saved.(string) != value {
 						t.Fatalf("Search failed for %s, returned %s, expected %s", cidr, saved.(string), value)
@@ -163,7 +166,7 @@ func extendedV4Tests(t *testing.T) {
 					t.Fatalf("Search failed for %s, %v/%v", cidr, res, err)
 				}
 
-				res, saved, err = v4t.Delete(cidr)
+				res, saved, err = v4t.Delete(ctx, cidr)
 				if nil == err && Match == res {
 					if saved.(string) != value {
 						t.Fatalf("Delete failed for %s, returned %s, expected %s", cidr, saved.(string), value)
