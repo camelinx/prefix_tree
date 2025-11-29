@@ -1,5 +1,14 @@
 package prefix_tree
 
+// Implements a generic prefix tree (trie) data structure. Implements insert, delete and exact/partial search operations.
+// The tree can store any type of value associated with the keys. The keys are represented as byte slices along with
+// corresponding masks. Masks are useful when storing IP addresses in CIDR notation. The tree supports lock handlers
+// for concurrent access.
+//
+// TODO:
+//   1. Tree compression to optimize memory usage and performance.
+//   2. Iterator to traverse the tree.
+
 import (
 	"context"
 	"fmt"

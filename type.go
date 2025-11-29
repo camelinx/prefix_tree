@@ -28,7 +28,7 @@ type ReadUnlockFn func(context.Context)
 type WriteLockFn func(context.Context)
 type UnlockFn func(context.Context)
 
-type AddrTree[T any] interface {
+type PrefixTree[T any] interface {
 	Insert(context.Context, string, *T) (OpResult, error)
 	Delete(context.Context, string) (OpResult, *T, error)
 	Search(context.Context, string) (OpResult, *T, error)

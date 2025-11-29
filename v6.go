@@ -52,7 +52,7 @@ func getv6Addr(saddr string) (net.IP, net.IPMask, error) {
 // Returns:
 //
 //	AddrTree - IPv6 prefix tree
-func NewV6Tree[T any]() AddrTree[T] {
+func NewV6Tree[T any]() PrefixTree[T] {
 	return &V6Tree[T]{
 		tree: NewTree[T](),
 	}
@@ -69,7 +69,7 @@ func NewV6Tree[T any]() AddrTree[T] {
 // Returns:
 //
 //	AddrTree - IPv6 prefix tree
-func NewV6TreeWithLockHandlers[T any](rlockFn ReadLockFn, runlockFn ReadUnlockFn, wlockFn WriteLockFn, unlockFn UnlockFn) AddrTree[T] {
+func NewV6TreeWithLockHandlers[T any](rlockFn ReadLockFn, runlockFn ReadUnlockFn, wlockFn WriteLockFn, unlockFn UnlockFn) PrefixTree[T] {
 	return &V6Tree[T]{
 		tree: NewTreeWithLockHandlers[T](rlockFn, runlockFn, wlockFn, unlockFn),
 	}
@@ -107,8 +107,8 @@ func (v6t *V6Tree[T]) Insert(ctx context.Context, saddr string, value *T) (OpRes
 // Returns:
 //
 //	OpResult - result of the delete operation
-//	interface{} - value associated with the deleted address, if any
-//	error      - error, if any
+//	T        - value associated with the deleted address, if any
+//	error    - error, if any
 func (v6t *V6Tree[T]) Delete(ctx context.Context, saddr string) (OpResult, *T, error) {
 	addr, mask, err := getv6Addr(saddr)
 	if nil != err {
@@ -134,8 +134,8 @@ func (v6t *V6Tree[T]) Delete(ctx context.Context, saddr string) (OpResult, *T, e
 // Returns:
 //
 //	OpResult - result of the search operation
-//	interface{} - value associated with the found address, if any
-//	error      - error, if any
+//	T        - value associated with the found address, if any
+//	error    - error, if any
 func (v6t *V6Tree[T]) Search(ctx context.Context, saddr string) (OpResult, *T, error) {
 	addr, mask, err := getv6Addr(saddr)
 	if nil != err {
@@ -156,8 +156,8 @@ func (v6t *V6Tree[T]) Search(ctx context.Context, saddr string) (OpResult, *T, e
 // Returns:
 //
 //	OpResult - result of the search operation
-//	interface{} - value associated with the found address, if any
-//	error      - error, if any
+//	T        - value associated with the found address, if any
+//	error    - error, if any
 func (v6t *V6Tree[T]) SearchExact(ctx context.Context, saddr string) (OpResult, *T, error) {
 	addr, mask, err := getv6Addr(saddr)
 	if nil != err {

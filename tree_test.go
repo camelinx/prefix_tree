@@ -252,27 +252,22 @@ func BenchmarkSearchPartial(b *testing.B) {
 // BenchmarkDelete benchmarks deletion from the tree
 func BenchmarkDelete(b *testing.B) {
 	ctx := context.Background()
-	keys := generateTestKeys(1000)
+	tree := NewTree[int]()
+	keys := generateTestKeys(b.N)
+
+	// Pre-populate the tree
+	for i := 0; i < b.N; i++ {
+		key := keys[i].key
+		mask := keys[i].mask
+		ival := i
+		tree.Insert(ctx, key, mask, &ival)
+	}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		tree := NewTree[int]()
-		// Pre-populate with keys
-		for j := 0; j < len(keys); j++ {
-			key := keys[j].key
-			mask := keys[j].mask
-			ival := j
-			tree.Insert(ctx, key, mask, &ival)
-		}
-
-		b.StopTimer()
-		// Benchmark deletion of one key per iteration
-		if i < len(keys) {
-			key := keys[i].key
-			mask := keys[i].mask
-			b.StartTimer()
-			tree.Delete(ctx, key, mask)
-		}
+		key := keys[i].key
+		mask := keys[i].mask
+		tree.Delete(ctx, key, mask)
 	}
 }
 

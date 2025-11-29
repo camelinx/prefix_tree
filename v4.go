@@ -48,7 +48,7 @@ func getv4Addr(saddr string) (net.IP, net.IPMask, error) {
 // Returns:
 //
 //	AddrTree - IPv4 prefix tree
-func NewV4Tree[T any]() AddrTree[T] {
+func NewV4Tree[T any]() PrefixTree[T] {
 	return &V4Tree[T]{
 		tree: NewTree[T](),
 	}
@@ -65,7 +65,7 @@ func NewV4Tree[T any]() AddrTree[T] {
 // Returns:
 //
 //	AddrTree - IPv4 prefix tree
-func NewV4TreeWithLockHandlers[T any](rlockFn ReadLockFn, runlockFn ReadUnlockFn, wlockFn WriteLockFn, unlockFn UnlockFn) AddrTree[T] {
+func NewV4TreeWithLockHandlers[T any](rlockFn ReadLockFn, runlockFn ReadUnlockFn, wlockFn WriteLockFn, unlockFn UnlockFn) PrefixTree[T] {
 	return &V4Tree[T]{
 		tree: NewTreeWithLockHandlers[T](rlockFn, runlockFn, wlockFn, unlockFn),
 	}
@@ -103,7 +103,7 @@ func (v4t *V4Tree[T]) Insert(ctx context.Context, saddr string, value *T) (OpRes
 // Returns:
 //
 //	OpResult - result of the delete operation
-//	interface{} - value associated with the deleted address/mask, if any
+//	T        - value associated with the deleted address/mask, if any
 //	error    - error, if any
 func (v4t *V4Tree[T]) Delete(ctx context.Context, saddr string) (OpResult, *T, error) {
 	addr, mask, err := getv4Addr(saddr)
@@ -130,7 +130,7 @@ func (v4t *V4Tree[T]) Delete(ctx context.Context, saddr string) (OpResult, *T, e
 // Returns:
 //
 //	OpResult - result of the search operation
-//	interface{} - value associated with the found address/mask, if any
+//	T        - value associated with the found address/mask, if any
 //	error    - error, if any
 func (v4t *V4Tree[T]) Search(ctx context.Context, saddr string) (OpResult, *T, error) {
 	addr, mask, err := getv4Addr(saddr)
@@ -152,7 +152,7 @@ func (v4t *V4Tree[T]) Search(ctx context.Context, saddr string) (OpResult, *T, e
 // Returns:
 //
 //	OpResult - result of the search operation
-//	interface{} - value associated with the found address/mask, if any
+//	T        - value associated with the found address/mask, if any
 //	error    - error, if any
 func (v4t *V4Tree[T]) SearchExact(ctx context.Context, saddr string) (OpResult, *T, error) {
 	addr, mask, err := getv4Addr(saddr)
