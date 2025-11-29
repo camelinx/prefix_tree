@@ -28,11 +28,11 @@ type ReadUnlockFn func(context.Context)
 type WriteLockFn func(context.Context)
 type UnlockFn func(context.Context)
 
-type AddrTree interface {
-	Insert(context.Context, string, interface{}) (OpResult, error)
-	Delete(context.Context, string) (OpResult, interface{}, error)
-	Search(context.Context, string) (OpResult, interface{}, error)
-	SearchExact(context.Context, string) (OpResult, interface{}, error)
+type AddrTree[T any] interface {
+	Insert(context.Context, string, *T) (OpResult, error)
+	Delete(context.Context, string) (OpResult, *T, error)
+	Search(context.Context, string) (OpResult, *T, error)
+	SearchExact(context.Context, string) (OpResult, *T, error)
 	GetNodesCount() uint64
 }
 

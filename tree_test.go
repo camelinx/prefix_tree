@@ -9,13 +9,14 @@ import (
 
 func TestTree_Insert_Search_Delete(t *testing.T) {
 	ctx := context.Background()
-	tr := NewTree()
+	tr := NewTree[string]()
 
 	// basic insert
 	key := []byte{0xC0, 0xA8, 0x01, 0x01} // 192.168.1.1
 	mask := []byte{0xFF, 0xFF, 0xFF, 0xFF}
 
-	res, err := tr.Insert(ctx, key, mask, "value1")
+	val := "value1"
+	res, err := tr.Insert(ctx, key, mask, &val)
 	if err != nil || res != Ok {
 		t.Fatalf("Insert failed: res=%v err=%v", res, err)
 	}
@@ -25,7 +26,8 @@ func TestTree_Insert_Search_Delete(t *testing.T) {
 	}
 
 	// duplicate insert returns Dup
-	res, err = tr.Insert(ctx, key, mask, "value1-dup")
+	val1dup := "value1-dup"
+	res, err = tr.Insert(ctx, key, mask, &val1dup)
 	if err != nil || res != Dup {
 		t.Fatalf("expected Dup on duplicate insert, got res=%v err=%v", res, err)
 	}
@@ -35,7 +37,7 @@ func TestTree_Insert_Search_Delete(t *testing.T) {
 	if err != nil || res != Match {
 		t.Fatalf("SearchExact failed: res=%v err=%v", res, err)
 	}
-	if v != "value1" {
+	if *v != val {
 		t.Fatalf("unexpected value: %v", v)
 	}
 
@@ -44,16 +46,16 @@ func TestTree_Insert_Search_Delete(t *testing.T) {
 	if err != nil || res != Match {
 		t.Fatalf("SearchPartial failed: res=%v err=%v", res, err)
 	}
-	if v != "value1" {
+	if *v != val {
 		t.Fatalf("unexpected value: %v", v)
 	}
 
 	// delete should return the stored value and decrement NumNodes
-	res, val, err := tr.Delete(ctx, key, mask)
+	res, pval, err := tr.Delete(ctx, key, mask)
 	if err != nil || res != Match {
 		t.Fatalf("Delete failed: res=%v err=%v", res, err)
 	}
-	if val != "value1" {
+	if *pval != val {
 		t.Fatalf("Delete returned wrong value: %v", val)
 	}
 	if tr.NumNodes != 0 {
@@ -69,43 +71,44 @@ func TestTree_Insert_Search_Delete(t *testing.T) {
 
 func TestTree_Partial_Prefixs(t *testing.T) {
 	ctx := context.Background()
-	tr := NewTree()
+	tr := NewTree[string]()
 
 	// insert a /24 prefix: 10.0.1.0/24 -> mask first three octets
 	key := []byte{10, 0, 1, 0}
 	mask := []byte{0xFF, 0xFF, 0xFF, 0x00} // /24
 
-	res, err := tr.Insert(ctx, key, mask, "net-10-0-1")
+	vnet := "net-10-0-1"
+	res, err := tr.Insert(ctx, key, mask, &vnet)
 	if err != nil || res != Ok {
 		t.Fatalf("Insert prefix failed: %v %v", res, err)
 	}
 
 	// search for an address inside prefix should match partial search
 	addr := []byte{10, 0, 1, 42}
-	res, val, err := tr.SearchPartial(ctx, addr, mask)
+	res, pval, err := tr.SearchPartial(ctx, addr, mask)
 	if err != nil || res != Match {
 		t.Fatalf("SearchPartial for address inside prefix failed: %v %v", res, err)
 	}
-	if val != "net-10-0-1" {
-		t.Fatalf("unexpected partial match value: %v", val)
+	if *pval != vnet {
+		t.Fatalf("unexpected partial match value: %v", *pval)
 	}
 
 	// exact search for the specific network key should also match
-	res, val, err = tr.SearchExact(ctx, key, mask)
+	res, pval, err = tr.SearchExact(ctx, key, mask)
 	if err != nil || res != Match {
 		t.Fatalf("SearchExact for network key failed: %v %v", res, err)
 	}
-	if val != "net-10-0-1" {
-		t.Fatalf("unexpected exact match value: %v", val)
+	if *pval != vnet {
+		t.Fatalf("unexpected exact match value: %v", *pval)
 	}
 
 	// delete should return the stored value and decrement NumNodes
-	res, val, err = tr.Delete(ctx, key, mask)
+	res, pval, err = tr.Delete(ctx, key, mask)
 	if err != nil || res != Match {
 		t.Fatalf("Delete prefix failed: %v %v", res, err)
 	}
-	if val != "net-10-0-1" {
-		t.Fatalf("Delete returned wrong value for prefix: %v", val)
+	if *pval != vnet {
+		t.Fatalf("Delete returned wrong value for prefix: %v", *pval)
 	}
 	if tr.NumNodes != 0 {
 		t.Fatalf("expected NumNodes 0 got %d", tr.NumNodes)
@@ -124,18 +127,19 @@ func TestTree_Partial_Prefixs(t *testing.T) {
 	}
 
 	// Insert again to ensure tree is still functional
-	res, err = tr.Insert(ctx, key, mask, "net-10-0-1-again")
+	valagain := "net-10-0-1-again"
+	res, err = tr.Insert(ctx, key, mask, &valagain)
 	if err != nil || res != Ok {
 		t.Fatalf("Re-insert prefix failed: %v %v", res, err)
 	}
 
 	// Delete with partial key should work
-	res, val, err = tr.Delete(ctx, addr, mask)
+	res, pval, err = tr.Delete(ctx, addr, mask)
 	if err != nil {
 		t.Fatalf("Delete with partial key failed: %v %v", res, err)
 	}
-	if val != "net-10-0-1-again" {
-		t.Fatalf("Delete with partial key returned wrong value: %v", val)
+	if *pval != valagain {
+		t.Fatalf("Delete with partial key returned wrong value: %v", *pval)
 	}
 	if tr.NumNodes != 0 {
 		t.Fatalf("expected NumNodes 0 got %d", tr.NumNodes)
@@ -152,13 +156,15 @@ func TestTree_LockingHandlers(t *testing.T) {
 	wlock := func(_ context.Context) { called.w++ }
 	unlock := func(_ context.Context) { called.u++ }
 
-	tr := NewTreeWithLockHandlers(rlock, runlock, wlock, unlock)
+	tr := NewTreeWithLockHandlers[string](rlock, runlock, wlock, unlock)
 
 	key := []byte{1, 2, 3, 4}
 	mask := []byte{0xFF, 0xFF, 0xFF, 0xFF}
 
+	val := "x"
+
 	// Insert should call write lock/unlock
-	_, _ = tr.Insert(ctx, key, mask, "x")
+	_, _ = tr.Insert(ctx, key, mask, &val)
 	if called.w == 0 || called.u == 0 {
 		t.Fatalf("expected write lock/unlock called, got w=%d u=%d", called.w, called.u)
 	}
@@ -187,28 +193,30 @@ func TestTree_LockingHandlers(t *testing.T) {
 // BenchmarkInsertExact benchmarks inserting exact IPv4/IPv6 addresses into the tree
 func BenchmarkInsertExact(b *testing.B) {
 	ctx := context.Background()
-	tree := NewTree()
+	tree := NewTree[int]()
 	keys := generateTestKeys(b.N)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		key := keys[i].key
 		mask := keys[i].mask
-		tree.Insert(ctx, key, mask, i)
+		ival := i
+		tree.Insert(ctx, key, mask, &ival)
 	}
 }
 
 // BenchmarkSearchExact benchmarks exact searches in a pre-populated tree
 func BenchmarkSearchExact(b *testing.B) {
 	ctx := context.Background()
-	tree := NewTree()
+	tree := NewTree[int]()
 	keys := generateTestKeys(b.N)
 
 	// Pre-populate the tree
 	for i := 0; i < b.N; i++ {
 		key := keys[i].key
 		mask := keys[i].mask
-		tree.Insert(ctx, key, mask, i)
+		ival := i
+		tree.Insert(ctx, key, mask, &ival)
 	}
 
 	b.ResetTimer()
@@ -222,14 +230,15 @@ func BenchmarkSearchExact(b *testing.B) {
 // BenchmarkSearchPartial benchmarks partial searches in a pre-populated tree
 func BenchmarkSearchPartial(b *testing.B) {
 	ctx := context.Background()
-	tree := NewTree()
+	tree := NewTree[int]()
 	keys := generateTestKeys(b.N)
 
 	// Pre-populate the tree
 	for i := 0; i < b.N; i++ {
 		key := keys[i].key
 		mask := keys[i].mask
-		tree.Insert(ctx, key, mask, i)
+		ival := i
+		tree.Insert(ctx, key, mask, &ival)
 	}
 
 	b.ResetTimer()
@@ -247,12 +256,13 @@ func BenchmarkDelete(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		tree := NewTree()
+		tree := NewTree[int]()
 		// Pre-populate with keys
 		for j := 0; j < len(keys); j++ {
 			key := keys[j].key
 			mask := keys[j].mask
-			tree.Insert(ctx, key, mask, j)
+			ival := j
+			tree.Insert(ctx, key, mask, &ival)
 		}
 
 		b.StopTimer()
@@ -294,11 +304,13 @@ func BenchmarkGCPressure(b *testing.B) {
 
 			b.ResetTimer()
 
-			tree := NewTree()
+			tree := NewTree[int]()
 			for i := 0; i < tt.count; i++ {
 				key := keys[i].key
 				mask := keys[i].mask
-				tree.Insert(ctx, key, mask, i)
+
+				ival := i
+				tree.Insert(ctx, key, mask, &ival)
 			}
 
 			b.StopTimer()
@@ -321,14 +333,15 @@ func BenchmarkGCPressure(b *testing.B) {
 // BenchmarkMixedOperations benchmarks a realistic mix of insert/search/delete
 func BenchmarkMixedOperations(b *testing.B) {
 	ctx := context.Background()
-	tree := NewTree()
+	tree := NewTree[int]()
 	keys := generateTestKeys(b.N)
 
 	// Pre-populate 50% of keys
 	for i := 0; i < b.N/2; i++ {
 		key := keys[i].key
 		mask := keys[i].mask
-		tree.Insert(ctx, key, mask, i)
+		ival := i
+		tree.Insert(ctx, key, mask, &ival)
 	}
 
 	b.ResetTimer()
@@ -341,70 +354,13 @@ func BenchmarkMixedOperations(b *testing.B) {
 		mask := keys[idx].mask
 
 		if op < 40 {
-			tree.Insert(ctx, key, mask, i)
+			ival := i
+			tree.Insert(ctx, key, mask, &ival)
 		} else if op < 90 {
 			tree.SearchExact(ctx, key, mask)
 		} else {
 			tree.Delete(ctx, key, mask)
 		}
-	}
-}
-
-// BenchmarkV4TreeInsert benchmarks V4Tree.Insert
-func BenchmarkV4TreeInsert(b *testing.B) {
-	ctx := context.Background()
-	v4tree := NewV4Tree()
-	addresses := generateIPv4Addresses(b.N)
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		v4tree.Insert(ctx, addresses[i], i)
-	}
-}
-
-// BenchmarkV4TreeSearch benchmarks V4Tree.Search
-func BenchmarkV4TreeSearch(b *testing.B) {
-	ctx := context.Background()
-	v4tree := NewV4Tree()
-	addresses := generateIPv4Addresses(b.N)
-
-	// Pre-populate
-	for i := 0; i < b.N; i++ {
-		v4tree.Insert(ctx, addresses[i], i)
-	}
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		v4tree.Search(ctx, addresses[i])
-	}
-}
-
-// BenchmarkV6TreeInsert benchmarks V6Tree.Insert
-func BenchmarkV6TreeInsert(b *testing.B) {
-	ctx := context.Background()
-	v6tree := NewV6Tree()
-	addresses := generateIPv6Addresses(b.N)
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		v6tree.Insert(ctx, addresses[i], i)
-	}
-}
-
-// BenchmarkV6TreeSearch benchmarks V6Tree.Search
-func BenchmarkV6TreeSearch(b *testing.B) {
-	ctx := context.Background()
-	v6tree := NewV6Tree()
-	addresses := generateIPv6Addresses(b.N)
-
-	// Pre-populate
-	for i := 0; i < b.N; i++ {
-		v6tree.Insert(ctx, addresses[i], i)
-	}
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		v6tree.Search(ctx, addresses[i])
 	}
 }
 
@@ -418,24 +374,26 @@ func BenchmarkAllocations(b *testing.B) {
 		{
 			"Insert_1000_Keys",
 			func() {
-				tree := NewTree()
+				tree := NewTree[int]()
 				keys := generateTestKeys(1000)
 				for i := 0; i < 1000; i++ {
 					key := keys[i].key
 					mask := keys[i].mask
-					tree.Insert(ctx, key, mask, i)
+					ival := i
+					tree.Insert(ctx, key, mask, &ival)
 				}
 			},
 		},
 		{
 			"Search_1000_Keys",
 			func() {
-				tree := NewTree()
+				tree := NewTree[int]()
 				keys := generateTestKeys(1000)
 				for i := 0; i < 1000; i++ {
 					key := keys[i].key
 					mask := keys[i].mask
-					tree.Insert(ctx, key, mask, i)
+					ival := i
+					tree.Insert(ctx, key, mask, &ival)
 				}
 				for i := 0; i < 1000; i++ {
 					key := keys[i].key

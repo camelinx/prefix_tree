@@ -5,8 +5,8 @@ import (
 	"fmt"
 )
 
-type Tree struct {
-	root *treeNode
+type Tree[T any] struct {
+	root *Node[T]
 
 	NumNodes uint64
 
@@ -20,9 +20,9 @@ type Tree struct {
 // Returns:
 //
 //	*Tree - pointer to the new prefix tree
-func NewTree() *Tree {
-	return &Tree{
-		root:     rootNode(),
+func NewTree[T any]() *Tree[T] {
+	return &Tree[T]{
+		root:     RootNode[T](),
 		NumNodes: 0,
 	}
 }
@@ -38,8 +38,8 @@ func NewTree() *Tree {
 // Returns:
 //
 //	*Tree - pointer to the new prefix tree
-func NewTreeWithLockHandlers(rlockFn ReadLockFn, runlockFn ReadUnlockFn, wlockFn WriteLockFn, unlockFn UnlockFn) *Tree {
-	t := NewTree()
+func NewTreeWithLockHandlers[T any](rlockFn ReadLockFn, runlockFn ReadUnlockFn, wlockFn WriteLockFn, unlockFn UnlockFn) *Tree[T] {
+	t := NewTree[T]()
 	t.rlockFn = rlockFn
 	t.runlockFn = runlockFn
 	t.wlockFn = wlockFn
@@ -47,7 +47,7 @@ func NewTreeWithLockHandlers(rlockFn ReadLockFn, runlockFn ReadUnlockFn, wlockFn
 	return t
 }
 
-func (t *Tree) rlock(ctx context.Context) {
+func (t *Tree[T]) rlock(ctx context.Context) {
 	if nil == t || nil == t.rlockFn {
 		return
 	}
@@ -55,7 +55,7 @@ func (t *Tree) rlock(ctx context.Context) {
 	t.rlockFn(ctx)
 }
 
-func (t *Tree) runlock(ctx context.Context) {
+func (t *Tree[T]) runlock(ctx context.Context) {
 	if nil == t || nil == t.runlockFn {
 		return
 	}
@@ -63,7 +63,7 @@ func (t *Tree) runlock(ctx context.Context) {
 	t.runlockFn(ctx)
 }
 
-func (t *Tree) wlock(ctx context.Context) {
+func (t *Tree[T]) wlock(ctx context.Context) {
 	if nil == t || nil == t.wlockFn {
 		return
 	}
@@ -71,7 +71,7 @@ func (t *Tree) wlock(ctx context.Context) {
 	t.wlockFn(ctx)
 }
 
-func (t *Tree) unlock(ctx context.Context) {
+func (t *Tree[T]) unlock(ctx context.Context) {
 	if nil == t || nil == t.unlockFn {
 		return
 	}
@@ -79,13 +79,13 @@ func (t *Tree) unlock(ctx context.Context) {
 	t.unlockFn(ctx)
 }
 
-func (t *Tree) incrNumNodes() {
+func (t *Tree[T]) incrNumNodes() {
 	if nil != t {
 		t.NumNodes++
 	}
 }
 
-func (t *Tree) decrNumNodes() {
+func (t *Tree[T]) decrNumNodes() {
 	if nil != t && t.NumNodes > 0 {
 		t.NumNodes--
 	}
@@ -108,7 +108,7 @@ var (
 //
 //	OpResult - result of the operation
 //	error    - error if any
-func (t *Tree) Insert(ctx context.Context, key []byte, mask []byte, value interface{}) (OpResult, error) {
+func (t *Tree[T]) Insert(ctx context.Context, key []byte, mask []byte, value *T) (OpResult, error) {
 	if nil == t {
 		return Error, ErrInvalidPrefixTree
 	}
@@ -178,12 +178,12 @@ func (t *Tree) Insert(ctx context.Context, key []byte, mask []byte, value interf
 		// If the node is already terminal, it's a duplicate insert
 		// It is left to the caller to determine if this is an error.
 		// We will not return an error here.
-		if node.isTerminal() {
+		if node.IsTerminal() {
 			return Dup, nil
 		}
 
 		// Mark the node as terminal and set the value
-		node.saveAndMarkTerminal(value)
+		node.SaveAndMarkTerminal(value)
 
 		// Increment node count
 		t.incrNumNodes()
@@ -201,7 +201,7 @@ func (t *Tree) Insert(ctx context.Context, key []byte, mask []byte, value interf
 	// Create new nodes for the remaining bits in the key/mask.
 	for match == match&mask[maskIdx] {
 		// Create a new node
-		next = newNode()
+		next = NewNode[T]()
 
 		// Bit 1 goes to right child, bit 0 goes to left child.
 		if match == match&key[maskIdx] {
@@ -230,7 +230,7 @@ func (t *Tree) Insert(ctx context.Context, key []byte, mask []byte, value interf
 
 	// The last node created corresponds to the key/mask.
 	// Mark it as terminal and set the value.
-	node.saveAndMarkTerminal(value)
+	node.SaveAndMarkTerminal(value)
 
 	// Increment node count
 	t.incrNumNodes()
@@ -252,7 +252,7 @@ func (t *Tree) Insert(ctx context.Context, key []byte, mask []byte, value interf
 //	 *treeNodeStack - stack of nodes traversed during the search
 //		OpResult  - result of the operation
 //		error     - error if any
-func (t *Tree) find(key []byte, mask []byte, mType MatchType) (*treeNode, *treeNodeStack, OpResult, error) {
+func (t *Tree[T]) find(key []byte, mask []byte, mType MatchType) (*Node[T], *NodeStack[T], OpResult, error) {
 	if nil == t {
 		return nil, nil, Error, ErrInvalidPrefixTree
 	}
@@ -269,14 +269,14 @@ func (t *Tree) find(key []byte, mask []byte, mType MatchType) (*treeNode, *treeN
 	node := t.root
 	ret := Match
 
-	treeNodeStack := newTreeNodeStack()
+	treeNodeStack := NewNodeStack[T]()
 
 	// Traverse down the tree as far as possible.
 	for nil != node && match == match&mask[maskIdx] {
 		// Check for partial match condition. If we see a terminal node
 		// during traversal and the match type is Partial, we are done.
 		// A partial match will find the earliest matching prefix in the tree.
-		if Partial == mType && node.isTerminal() {
+		if Partial == mType && node.IsTerminal() {
 			ret = PartialMatch
 			break
 		}
@@ -308,7 +308,7 @@ func (t *Tree) find(key []byte, mask []byte, mType MatchType) (*treeNode, *treeN
 	}
 
 	// For Exact match, we must end up on a terminal node
-	if nil != node && node.isTerminal() {
+	if nil != node && node.IsTerminal() {
 		return node, treeNodeStack, ret, nil
 	}
 
@@ -327,7 +327,7 @@ func (t *Tree) find(key []byte, mask []byte, mType MatchType) (*treeNode, *treeN
 //	OpResult - result of the operation
 //	interface{} - value associated with the deleted key
 //	error    - error if any
-func (t *Tree) Delete(ctx context.Context, key []byte, mask []byte) (OpResult, interface{}, error) {
+func (t *Tree[T]) Delete(ctx context.Context, key []byte, mask []byte) (OpResult, *T, error) {
 	if nil == t {
 		return Error, nil, ErrInvalidPrefixTree
 	}
@@ -348,14 +348,14 @@ func (t *Tree) Delete(ctx context.Context, key []byte, mask []byte) (OpResult, i
 	}
 
 	// This condition should never be hit
-	if nil == node || !node.isTerminal() || node.isRoot() {
+	if nil == node || !node.IsTerminal() || node.IsRoot() {
 		return Error, nil, ErrKeyNotFound
 	}
 
 	// Is the match node not a leaf?
-	if !node.isLeaf() {
+	if !node.IsLeaf() {
 		// Unmark terminal to indicate deletion
-		node.unmarkTerminal()
+		node.UnmarkTerminal()
 
 		// Decrement node count
 		t.decrNumNodes()
@@ -381,7 +381,7 @@ func (t *Tree) Delete(ctx context.Context, key []byte, mask []byte) (OpResult, i
 		node = parent
 
 		// If the new node is a leaf, terminal or root, break
-		if !node.isLeaf() || node.isTerminal() || node.isRoot() {
+		if !node.IsLeaf() || node.IsTerminal() || node.IsRoot() {
 			break
 		}
 	}
@@ -406,7 +406,7 @@ func (t *Tree) Delete(ctx context.Context, key []byte, mask []byte) (OpResult, i
 //	OpResult - result of the operation
 //	interface{} - value associated with the found key
 //	error    - error if any
-func (t *Tree) Search(ctx context.Context, key []byte, mask []byte, mType MatchType) (OpResult, interface{}, error) {
+func (t *Tree[T]) Search(ctx context.Context, key []byte, mask []byte, mType MatchType) (OpResult, *T, error) {
 	if nil == t {
 		return Error, nil, ErrInvalidPrefixTree
 	}
@@ -427,7 +427,7 @@ func (t *Tree) Search(ctx context.Context, key []byte, mask []byte, mType MatchT
 	}
 
 	// This condition should never be hit
-	if nil == node || !node.isTerminal() || node.isRoot() {
+	if nil == node || !node.IsTerminal() || node.IsRoot() {
 		return Error, nil, ErrKeyNotFound
 	}
 
@@ -447,7 +447,7 @@ func (t *Tree) Search(ctx context.Context, key []byte, mask []byte, mType MatchT
 //	OpResult - result of the operation
 //	interface{} - value associated with the found key
 //	error    - error if any
-func (t *Tree) SearchExact(ctx context.Context, key []byte, mask []byte) (OpResult, interface{}, error) {
+func (t *Tree[T]) SearchExact(ctx context.Context, key []byte, mask []byte) (OpResult, *T, error) {
 	return t.Search(ctx, key, mask, Exact)
 }
 
@@ -463,6 +463,6 @@ func (t *Tree) SearchExact(ctx context.Context, key []byte, mask []byte) (OpResu
 //	OpResult - result of the operation
 //	interface{} - value associated with the found key
 //	error    - error if any
-func (t *Tree) SearchPartial(ctx context.Context, key []byte, mask []byte) (OpResult, interface{}, error) {
+func (t *Tree[T]) SearchPartial(ctx context.Context, key []byte, mask []byte) (OpResult, *T, error) {
 	return t.Search(ctx, key, mask, Partial)
 }

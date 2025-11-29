@@ -1,84 +1,80 @@
 package prefix_tree
 
-// treeNode represents a node in the prefix tree.
-type treeNode struct {
-	right *treeNode
-	left  *treeNode
+// Node represents a node in the prefix tree.
+type Node[T any] struct {
+	right *Node[T]
+	left  *Node[T]
 
 	root     bool
 	terminal bool
-	value    interface{}
+	value    *T // Can be nil
 }
 
-func newNode() *treeNode {
-	return &treeNode{terminal: false}
+func NewNode[T any]() *Node[T] {
+	return &Node[T]{terminal: false}
 }
 
-func rootNode() *treeNode {
-	node := newNode()
+func RootNode[T any]() *Node[T] {
+	node := NewNode[T]()
 	node.root = true
 	return node
 }
 
-func (node *treeNode) isRoot() bool {
-	return nil != node && node.root
+func (n *Node[T]) IsRoot() bool {
+	return n.root
 }
 
-func (node *treeNode) isLeaf() bool {
-	return nil != node && nil == node.right && nil == node.left
+func (n *Node[T]) IsLeaf() bool {
+	return nil == n.right && nil == n.left
 }
 
-func (node *treeNode) isTerminal() bool {
-	return nil != node && node.terminal
+func (n *Node[T]) IsTerminal() bool {
+	return n.terminal
 }
 
-func (node *treeNode) markTerminal() {
-	if nil != node {
-		node.terminal = true
-	}
+func (n *Node[T]) MarkTerminal() {
+	n.terminal = true
 }
 
-func (node *treeNode) unmarkTerminal() {
-	if nil != node {
-		node.terminal = false
-	}
+func (n *Node[T]) UnmarkTerminal() {
+	n.terminal = false
 }
 
-func (node *treeNode) saveAndMarkTerminal(value interface{}) {
-	node.value = value
-	node.markTerminal()
+func (n *Node[T]) SaveAndMarkTerminal(value *T) {
+	n.value = value
+	n.MarkTerminal()
 }
 
 // treeNodeStack is a simple stack implementation for treeNode pointers.
 // Used to assist in tree traversals.
-type treeNodeStack struct {
-	nodes []*treeNode
+type NodeStack[T any] struct {
+	nodes []*Node[T]
 }
 
-func newTreeNodeStack() *treeNodeStack {
-	return &treeNodeStack{
-		nodes: make([]*treeNode, 0),
+func NewNodeStack[T any]() *NodeStack[T] {
+	return &NodeStack[T]{
+		nodes: make([]*Node[T], 0),
 	}
 }
 
-func (s *treeNodeStack) Push(node *treeNode) {
-	s.nodes = append(s.nodes, node)
+func (ns *NodeStack[T]) Push(node *Node[T]) {
+	ns.nodes = append(ns.nodes, node)
 }
 
-func (s *treeNodeStack) Pop() *treeNode {
-	if len(s.nodes) == 0 {
+func (ns *NodeStack[T]) Pop() *Node[T] {
+	if len(ns.nodes) == 0 {
 		return nil
 	}
 
-	node := s.nodes[len(s.nodes)-1]
-	s.nodes = s.nodes[:len(s.nodes)-1]
+	node := ns.nodes[len(ns.nodes)-1]
+	ns.nodes = ns.nodes[:len(ns.nodes)-1]
 	return node
 }
 
-func (s *treeNodeStack) IsEmpty() bool {
-	return len(s.nodes) == 0
+func (ns *NodeStack[T]) IsEmpty() bool {
+	return len(ns.nodes) == 0
 }
 
-func (s *treeNodeStack) Size() int {
-	return len(s.nodes)
+func (ns *NodeStack[T]) Size() int {
+	return len(ns.nodes)
 }

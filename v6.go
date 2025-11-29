@@ -6,8 +6,8 @@ import (
 	"net"
 )
 
-type V6Tree struct {
-	tree *Tree
+type V6Tree[T any] struct {
+	tree *Tree[T]
 }
 
 func testgetv6Addr(saddr string) (net.IP, net.IPMask, error) {
@@ -52,9 +52,9 @@ func getv6Addr(saddr string) (net.IP, net.IPMask, error) {
 // Returns:
 //
 //	AddrTree - IPv6 prefix tree
-func NewV6Tree() AddrTree {
-	return &V6Tree{
-		tree: NewTree(),
+func NewV6Tree[T any]() AddrTree[T] {
+	return &V6Tree[T]{
+		tree: NewTree[T](),
 	}
 }
 
@@ -69,9 +69,9 @@ func NewV6Tree() AddrTree {
 // Returns:
 //
 //	AddrTree - IPv6 prefix tree
-func NewV6TreeWithLockHandlers(rlockFn ReadLockFn, runlockFn ReadUnlockFn, wlockFn WriteLockFn, unlockFn UnlockFn) AddrTree {
-	return &V6Tree{
-		tree: NewTreeWithLockHandlers(rlockFn, runlockFn, wlockFn, unlockFn),
+func NewV6TreeWithLockHandlers[T any](rlockFn ReadLockFn, runlockFn ReadUnlockFn, wlockFn WriteLockFn, unlockFn UnlockFn) AddrTree[T] {
+	return &V6Tree[T]{
+		tree: NewTreeWithLockHandlers[T](rlockFn, runlockFn, wlockFn, unlockFn),
 	}
 }
 
@@ -87,7 +87,7 @@ func NewV6TreeWithLockHandlers(rlockFn ReadLockFn, runlockFn ReadUnlockFn, wlock
 //
 //	OpResult - result of the insert operation
 //	error    - error, if any
-func (v6t *V6Tree) Insert(ctx context.Context, saddr string, value interface{}) (OpResult, error) {
+func (v6t *V6Tree[T]) Insert(ctx context.Context, saddr string, value *T) (OpResult, error) {
 	addr, mask, err := getv6Addr(saddr)
 	if nil != err {
 		return Error, err
@@ -109,7 +109,7 @@ func (v6t *V6Tree) Insert(ctx context.Context, saddr string, value interface{}) 
 //	OpResult - result of the delete operation
 //	interface{} - value associated with the deleted address, if any
 //	error      - error, if any
-func (v6t *V6Tree) Delete(ctx context.Context, saddr string) (OpResult, interface{}, error) {
+func (v6t *V6Tree[T]) Delete(ctx context.Context, saddr string) (OpResult, *T, error) {
 	addr, mask, err := getv6Addr(saddr)
 	if nil != err {
 		return Error, nil, err
@@ -136,7 +136,7 @@ func (v6t *V6Tree) Delete(ctx context.Context, saddr string) (OpResult, interfac
 //	OpResult - result of the search operation
 //	interface{} - value associated with the found address, if any
 //	error      - error, if any
-func (v6t *V6Tree) Search(ctx context.Context, saddr string) (OpResult, interface{}, error) {
+func (v6t *V6Tree[T]) Search(ctx context.Context, saddr string) (OpResult, *T, error) {
 	addr, mask, err := getv6Addr(saddr)
 	if nil != err {
 		return Error, nil, err
@@ -158,7 +158,7 @@ func (v6t *V6Tree) Search(ctx context.Context, saddr string) (OpResult, interfac
 //	OpResult - result of the search operation
 //	interface{} - value associated with the found address, if any
 //	error      - error, if any
-func (v6t *V6Tree) SearchExact(ctx context.Context, saddr string) (OpResult, interface{}, error) {
+func (v6t *V6Tree[T]) SearchExact(ctx context.Context, saddr string) (OpResult, *T, error) {
 	addr, mask, err := getv6Addr(saddr)
 	if nil != err {
 		return Error, nil, err
@@ -171,6 +171,6 @@ func (v6t *V6Tree) SearchExact(ctx context.Context, saddr string) (OpResult, int
 // Returns:
 //
 //	uint64 - number of nodes in the tree
-func (v6t *V6Tree) GetNodesCount() uint64 {
+func (v6t *V6Tree[T]) GetNodesCount() uint64 {
 	return v6t.tree.NumNodes
 }

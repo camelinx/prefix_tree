@@ -1,6 +1,7 @@
 package prefix_tree
 
 import (
+	"context"
 	"net"
 	"testing"
 )
@@ -27,4 +28,35 @@ func TestV6(t *testing.T) {
 	validatev6Addr(t, "56fe::2159:5bbc::6594", "", "", true)
 	validatev6Addr(t, "192.168.128.40", "", "", true)
 	validatev6Addr(t, "192.168.128.40/32", "", "", true)
+}
+
+// BenchmarkV6TreeInsert benchmarks V6Tree.Insert
+func BenchmarkV6TreeInsert(b *testing.B) {
+	ctx := context.Background()
+	v6tree := NewV6Tree[int]()
+	addresses := generateIPv6Addresses(b.N)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		ival := i
+		v6tree.Insert(ctx, addresses[i], &ival)
+	}
+}
+
+// BenchmarkV6TreeSearch benchmarks V6Tree.Search
+func BenchmarkV6TreeSearch(b *testing.B) {
+	ctx := context.Background()
+	v6tree := NewV6Tree[int]()
+	addresses := generateIPv6Addresses(b.N)
+
+	// Pre-populate
+	for i := 0; i < b.N; i++ {
+		ival := i
+		v6tree.Insert(ctx, addresses[i], &ival)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		v6tree.Search(ctx, addresses[i])
+	}
 }

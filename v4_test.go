@@ -14,7 +14,7 @@ const (
 )
 
 func validatev4Addr(t *testing.T, saddr string, exip string, exmask string, negate bool) {
-	nip, nmask, err := testgetv4Addr(saddr)
+	nip, nmask, err := getv4Addr(saddr)
 	if (nil == err) == negate {
 		t.Fatalf("getv4Addr: error validating %s and negate %v", saddr, negate)
 	}
@@ -33,7 +33,7 @@ func basicV4Tests(t *testing.T) {
 }
 
 func randomV4Tests(t *testing.T) {
-	v4t := NewV4Tree()
+	v4t := NewV4Tree[string]()
 
 	for class := ipv4AddrClassMin + 1; class < ipv4AddrClassMax; class++ {
 		v4gen := newIpv4Generator()
@@ -111,7 +111,7 @@ func randomV4Tests(t *testing.T) {
 }
 
 func extendedV4Tests(t *testing.T) {
-	v4t := NewV4Tree()
+	v4t := NewV4Tree[string]()
 
 	elemsMap := make(map[string]bool)
 
@@ -128,14 +128,14 @@ func extendedV4Tests(t *testing.T) {
 				value := fmt.Sprintf("%s/%s", ip.String(), mask.String())
 
 				if _, exists := elemsMap[value]; !exists {
-					res, err := v4t.Insert(ctx, cidr, value)
+					res, err := v4t.Insert(ctx, cidr, &value)
 					if err != nil || res != Ok {
 						t.Fatalf("Failed to insert %s, result = %v, %v", cidr, res, err)
 					}
 
 					elemsMap[value] = true
 				} else {
-					res, err := v4t.Insert(ctx, cidr, value)
+					res, err := v4t.Insert(ctx, cidr, &value)
 					if err != nil || res != Dup {
 						t.Fatalf("Failed to identify duplicate %s, result = %v, %v", cidr, res, err)
 					}
@@ -159,8 +159,8 @@ func extendedV4Tests(t *testing.T) {
 
 				res, saved, err := v4t.SearchExact(ctx, cidr)
 				if nil == err && Match == res {
-					if saved.(string) != value {
-						t.Fatalf("Search failed for %s, returned %s, expected %s", cidr, saved.(string), value)
+					if *saved != value {
+						t.Fatalf("Search failed for %s, returned %s, expected %s", cidr, *saved, value)
 					}
 				} else {
 					t.Fatalf("Search failed for %s, %v/%v", cidr, res, err)
@@ -168,8 +168,8 @@ func extendedV4Tests(t *testing.T) {
 
 				res, saved, err = v4t.Delete(ctx, cidr)
 				if nil == err && Match == res {
-					if saved.(string) != value {
-						t.Fatalf("Delete failed for %s, returned %s, expected %s", cidr, saved.(string), value)
+					if *saved != value {
+						t.Fatalf("Delete failed for %s, returned %s, expected %s", cidr, *saved, value)
 					}
 				} else {
 					t.Fatalf("Delete failed for %s, %v/%v", cidr, res, err)
@@ -187,4 +187,35 @@ func TestV4(t *testing.T) {
 	basicV4Tests(t)
 	randomV4Tests(t)
 	extendedV4Tests(t)
+}
+
+// BenchmarkV4TreeInsert benchmarks V4Tree.Insert
+func BenchmarkV4TreeInsert(b *testing.B) {
+	ctx := context.Background()
+	v4tree := NewV4Tree[int]()
+	addresses := generateIPv4Addresses(b.N)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		ival := i
+		v4tree.Insert(ctx, addresses[i], &ival)
+	}
+}
+
+// BenchmarkV4TreeSearch benchmarks V4Tree.Search
+func BenchmarkV4TreeSearch(b *testing.B) {
+	ctx := context.Background()
+	v4tree := NewV4Tree[int]()
+	addresses := generateIPv4Addresses(b.N)
+
+	// Pre-populate
+	for i := 0; i < b.N; i++ {
+		ival := i
+		v4tree.Insert(ctx, addresses[i], &ival)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		v4tree.Search(ctx, addresses[i])
+	}
 }

@@ -6,12 +6,8 @@ import (
 	"net"
 )
 
-type V4Tree struct {
-	tree *Tree
-}
-
-func testgetv4Addr(saddr string) (net.IP, net.IPMask, error) {
-	return getv4Addr(saddr)
+type V4Tree[T any] struct {
+	tree *Tree[T]
 }
 
 // Returns the IPv4 address and mask for the given string representation
@@ -52,9 +48,9 @@ func getv4Addr(saddr string) (net.IP, net.IPMask, error) {
 // Returns:
 //
 //	AddrTree - IPv4 prefix tree
-func NewV4Tree() AddrTree {
-	return &V4Tree{
-		tree: NewTree(),
+func NewV4Tree[T any]() AddrTree[T] {
+	return &V4Tree[T]{
+		tree: NewTree[T](),
 	}
 }
 
@@ -69,9 +65,9 @@ func NewV4Tree() AddrTree {
 // Returns:
 //
 //	AddrTree - IPv4 prefix tree
-func NewV4TreeWithLockHandlers(rlockFn ReadLockFn, runlockFn ReadUnlockFn, wlockFn WriteLockFn, unlockFn UnlockFn) AddrTree {
-	return &V4Tree{
-		tree: NewTreeWithLockHandlers(rlockFn, runlockFn, wlockFn, unlockFn),
+func NewV4TreeWithLockHandlers[T any](rlockFn ReadLockFn, runlockFn ReadUnlockFn, wlockFn WriteLockFn, unlockFn UnlockFn) AddrTree[T] {
+	return &V4Tree[T]{
+		tree: NewTreeWithLockHandlers[T](rlockFn, runlockFn, wlockFn, unlockFn),
 	}
 }
 
@@ -87,7 +83,7 @@ func NewV4TreeWithLockHandlers(rlockFn ReadLockFn, runlockFn ReadUnlockFn, wlock
 //
 //	OpResult - result of the insert operation
 //	error    - error, if any
-func (v4t *V4Tree) Insert(ctx context.Context, saddr string, value interface{}) (OpResult, error) {
+func (v4t *V4Tree[T]) Insert(ctx context.Context, saddr string, value *T) (OpResult, error) {
 	addr, mask, err := getv4Addr(saddr)
 	if nil != err {
 		return Error, err
@@ -109,7 +105,7 @@ func (v4t *V4Tree) Insert(ctx context.Context, saddr string, value interface{}) 
 //	OpResult - result of the delete operation
 //	interface{} - value associated with the deleted address/mask, if any
 //	error    - error, if any
-func (v4t *V4Tree) Delete(ctx context.Context, saddr string) (OpResult, interface{}, error) {
+func (v4t *V4Tree[T]) Delete(ctx context.Context, saddr string) (OpResult, *T, error) {
 	addr, mask, err := getv4Addr(saddr)
 	if nil != err {
 		return Error, nil, err
@@ -136,7 +132,7 @@ func (v4t *V4Tree) Delete(ctx context.Context, saddr string) (OpResult, interfac
 //	OpResult - result of the search operation
 //	interface{} - value associated with the found address/mask, if any
 //	error    - error, if any
-func (v4t *V4Tree) Search(ctx context.Context, saddr string) (OpResult, interface{}, error) {
+func (v4t *V4Tree[T]) Search(ctx context.Context, saddr string) (OpResult, *T, error) {
 	addr, mask, err := getv4Addr(saddr)
 	if nil != err {
 		return Error, nil, err
@@ -158,7 +154,7 @@ func (v4t *V4Tree) Search(ctx context.Context, saddr string) (OpResult, interfac
 //	OpResult - result of the search operation
 //	interface{} - value associated with the found address/mask, if any
 //	error    - error, if any
-func (v4t *V4Tree) SearchExact(ctx context.Context, saddr string) (OpResult, interface{}, error) {
+func (v4t *V4Tree[T]) SearchExact(ctx context.Context, saddr string) (OpResult, *T, error) {
 	addr, mask, err := getv4Addr(saddr)
 	if nil != err {
 		return Error, nil, err
@@ -171,6 +167,6 @@ func (v4t *V4Tree) SearchExact(ctx context.Context, saddr string) (OpResult, int
 // Returns:
 //
 //	uint64 - number of nodes in the tree
-func (v4t *V4Tree) GetNodesCount() uint64 {
+func (v4t *V4Tree[T]) GetNodesCount() uint64 {
 	return v4t.tree.NumNodes
 }
