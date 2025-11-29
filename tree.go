@@ -16,6 +16,10 @@ type Tree struct {
 	unlockFn  UnlockFn
 }
 
+// Returns a new prefix tree
+// Returns:
+//
+//	*Tree - pointer to the new prefix tree
 func NewTree() *Tree {
 	return &Tree{
 		root:     rootNode(),
@@ -23,21 +27,24 @@ func NewTree() *Tree {
 	}
 }
 
-// Sets the lock handlers for the prefix tree
+// Returns a new prefix tree with lock handlers set
 // Arguments:
 //
-//	lockCtx   - context to be passed to the lock/unlock functions
 //	rlockFn   - read lock function
 //	runlockFn - read unlock function
 //	wlockFn   - write lock function
 //	unlockFn  - unlock function
-func (t *Tree) SetLockHandlers(rlockFn ReadLockFn, runlockFn ReadUnlockFn, wlockFn WriteLockFn, unlockFn UnlockFn) {
-	if nil != t {
-		t.rlockFn = rlockFn
-		t.runlockFn = runlockFn
-		t.wlockFn = wlockFn
-		t.unlockFn = unlockFn
-	}
+//
+// Returns:
+//
+//	*Tree - pointer to the new prefix tree
+func NewTreeWithLockHandlers(rlockFn ReadLockFn, runlockFn ReadUnlockFn, wlockFn WriteLockFn, unlockFn UnlockFn) *Tree {
+	t := NewTree()
+	t.rlockFn = rlockFn
+	t.runlockFn = runlockFn
+	t.wlockFn = wlockFn
+	t.unlockFn = unlockFn
+	return t
 }
 
 func (t *Tree) rlock(ctx context.Context) {

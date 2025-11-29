@@ -58,15 +58,21 @@ func NewV4Tree() AddrTree {
 	}
 }
 
-// Sets the lock handlers for the IPv4 prefix tree
+// Returns a new IPv4 prefix tree with custom lock handlers
 // Arguments:
 //
 //	rlockFn   - read lock function
 //	runlockFn - read unlock function
 //	wlockFn   - write lock function
 //	unlockFn  - unlock function
-func (v4t *V4Tree) SetLockHandlers(rlockFn ReadLockFn, runlockFn ReadUnlockFn, wlockFn WriteLockFn, unlockFn UnlockFn) {
-	v4t.tree.SetLockHandlers(rlockFn, runlockFn, wlockFn, unlockFn)
+//
+// Returns:
+//
+//	AddrTree - IPv4 prefix tree
+func NewV4TreeWithLockHandlers(rlockFn ReadLockFn, runlockFn ReadUnlockFn, wlockFn WriteLockFn, unlockFn UnlockFn) AddrTree {
+	return &V4Tree{
+		tree: NewTreeWithLockHandlers(rlockFn, runlockFn, wlockFn, unlockFn),
+	}
 }
 
 // Inserts the given IPv4 address and mask into the tree

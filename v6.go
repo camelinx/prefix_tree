@@ -58,15 +58,21 @@ func NewV6Tree() AddrTree {
 	}
 }
 
-// Sets the lock handlers for the IPv6 prefix tree
+// Returns a new IPv6 prefix tree with custom lock handlers
 // Arguments:
 //
 //	rlockFn   - read lock function
 //	runlockFn - read unlock function
 //	wlockFn   - write lock function
 //	unlockFn  - unlock function
-func (v6t *V6Tree) SetLockHandlers(rlockFn ReadLockFn, runlockFn ReadUnlockFn, wlockFn WriteLockFn, unlockFn UnlockFn) {
-	v6t.tree.SetLockHandlers(rlockFn, runlockFn, wlockFn, unlockFn)
+//
+// Returns:
+//
+//	AddrTree - IPv6 prefix tree
+func NewV6TreeWithLockHandlers(rlockFn ReadLockFn, runlockFn ReadUnlockFn, wlockFn WriteLockFn, unlockFn UnlockFn) AddrTree {
+	return &V6Tree{
+		tree: NewTreeWithLockHandlers(rlockFn, runlockFn, wlockFn, unlockFn),
+	}
 }
 
 // Inserts a new IPv6 address into the prefix tree

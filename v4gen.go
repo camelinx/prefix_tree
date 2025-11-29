@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
+	"time"
 )
 
 const (
@@ -25,7 +26,15 @@ const (
 	ipv4AddrClassMax
 )
 
-type ipv4AddrGenerator func() (string, error)
+type ipv4Gen struct {
+	block       []string
+	count       int
+	class       ipv4AddrClass
+	initialized bool
+	random      *rand.Rand
+}
+
+type ipv4AddrGenerator func(*ipv4Gen) (string, error)
 
 var ipv4AddrGenerators = []ipv4AddrGenerator{
 	ipv4AddrClassAny:      getAnyIpv4,
@@ -34,105 +43,100 @@ var ipv4AddrGenerators = []ipv4AddrGenerator{
 	ipv4AddrClassLoopback: getLoopbackIpv4,
 }
 
-type ipv4Gen struct {
-	block       []string
-	count       int
-	class       ipv4AddrClass
-	initialized bool
-}
-
 func newIpv4Generator() *ipv4Gen {
-	return &ipv4Gen{}
+	return &ipv4Gen{
+		random: rand.New(rand.NewSource(time.Now().UnixNano())),
+	}
 }
 
-func (ipv4Gen *ipv4Gen) initIpv4Block(blockCount int, addrClass ipv4AddrClass) (err error) {
+func (i4g *ipv4Gen) initIpv4Block(blockCount int, addrClass ipv4AddrClass) (err error) {
 	if addrClass <= ipv4AddrClassMin || addrClass >= ipv4AddrClassMax {
 		return fmt.Errorf("invalid address type %v", addrClass)
 	}
 
-	if ipv4Gen.initialized {
+	if i4g.initialized {
 		return nil
 	}
 
-	ipv4Gen.class = addrClass
-	ipv4Gen.count = blockCount
-	ipv4Gen.block = make([]string, ipv4Gen.count)
+	i4g.class = addrClass
+	i4g.count = blockCount
+	i4g.block = make([]string, i4g.count)
 
 	ipv4AddrGeneratorHandler := ipv4AddrGenerators[addrClass]
 	for i := 0; i < blockCount; i++ {
-		ipv4Addr, err := ipv4AddrGeneratorHandler()
+		ipv4Addr, err := ipv4AddrGeneratorHandler(i4g)
 		if err != nil {
 			return err
 		}
 
-		ipv4Gen.block[i] = ipv4Addr
+		i4g.block[i] = ipv4Addr
 	}
 
-	ipv4Gen.initialized = true
+	i4g.initialized = true
 	return nil
 }
 
-func getAnyIpv4() (string, error) {
+func getAnyIpv4(i4g *ipv4Gen) (string, error) {
 	octets := make([]int, 4)
 
-	octets[0], _ = genIpv4OctetWithExcludeList(
+	octets[0], _ = i4g.genIpv4OctetWithExcludeList(
 		ipv4MinOctet,
 		ipv4MaxOctet,
 		[]int{ipv4MinOctet},
 	)
 
 	for oi := 1; oi < 4; oi++ {
-		octets[oi], _ = genIpv4Octet(ipv4MinOctet, ipv4MaxOctet)
+		octets[oi], _ = i4g.genIpv4Octet(ipv4MinOctet, ipv4MaxOctet)
 	}
 
 	return getIpv4StringFromOctets(octets), nil
 }
 
-func getClassAIpv4() (string, error) {
+func getClassAIpv4(i4g *ipv4Gen) (string, error) {
 	octets := make([]int, 4)
 
-	octets[0], _ = genIpv4OctetWithExcludeList(
+	octets[0], _ = i4g.genIpv4OctetWithExcludeList(
 		ipv4MinOctet,
 		ipv4ClassAMaxOctet,
 		[]int{ipv4MinOctet, ipv4ClassAPrivateFirstOctet},
 	)
 
 	for oi := 1; oi < 4; oi++ {
-		octets[oi], _ = genIpv4Octet(ipv4MinOctet, ipv4MaxOctet)
+		octets[oi], _ = i4g.genIpv4Octet(ipv4MinOctet, ipv4MaxOctet)
 	}
 
 	return getIpv4StringFromOctets(octets), nil
 }
 
-func getClassAPrivateIpv4() (string, error) {
+func getClassAPrivateIpv4(i4g *ipv4Gen) (string, error) {
 	octets := make([]int, 4)
 
 	octets[0] = ipv4ClassAPrivateFirstOctet
 
 	for oi := 1; oi < 4; oi++ {
-		octets[oi], _ = genIpv4Octet(ipv4MinOctet, ipv4MaxOctet)
+		octets[oi], _ = i4g.genIpv4Octet(ipv4MinOctet, ipv4MaxOctet)
 	}
 
 	return getIpv4StringFromOctets(octets), nil
 }
 
-func getLoopbackIpv4() (string, error) {
+func getLoopbackIpv4(i4g *ipv4Gen) (string, error) {
 	octets := make([]int, 4)
 
 	octets[0] = ipv4LoopbackFirstOctet
 
 	for oi := 1; oi < 4; oi++ {
-		octets[oi], _ = genIpv4Octet(ipv4MinOctet, ipv4MaxOctet)
+		octets[oi], _ = i4g.genIpv4Octet(ipv4MinOctet, ipv4MaxOctet)
 	}
 
 	return getIpv4StringFromOctets(octets), nil
 }
 
-func genIpv4Octet(min, max int) (int, error) {
-	return genIpv4OctetWithExcludeList(min, max, []int{})
+func (i4g *ipv4Gen) genIpv4Octet(min, max int) (int, error) {
+	return i4g.genIpv4OctetWithExcludeList(min, max, []int{})
 }
 
-func genIpv4OctetWithExcludeList(min, max int, excludeList []int) (int, error) {
+func (i4g *ipv4Gen) genIpv4OctetWithExcludeList(min, max int, excludeList []int) (int, error) {
 	if max < 0 {
 		return 0, fmt.Errorf("invalid max: cannot be negative")
 	}
@@ -142,9 +146,9 @@ func genIpv4OctetWithExcludeList(min, max int, excludeList []int) (int, error) {
 		excludeMap[exclude] = true
 	}
 
-	octet := rand.Intn(max + 1)
+	octet := i4g.random.Intn(max + 1)
 	if octet < min {
-		octet += rand.Intn(max - min)
+		octet += i4g.random.Intn(max - min)
 	}
 
 	if _, exists := excludeMap[octet]; exists {

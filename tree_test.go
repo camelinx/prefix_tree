@@ -150,8 +150,7 @@ func TestTree_LockingHandlers(t *testing.T) {
 	wlock := func(_ context.Context) { called.w++ }
 	unlock := func(_ context.Context) { called.u++ }
 
-	tr := NewTree()
-	tr.SetLockHandlers(rlock, runlock, wlock, unlock)
+	tr := NewTreeWithLockHandlers(rlock, runlock, wlock, unlock)
 
 	key := []byte{1, 2, 3, 4}
 	mask := []byte{0xFF, 0xFF, 0xFF, 0xFF}

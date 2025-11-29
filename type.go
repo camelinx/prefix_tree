@@ -29,7 +29,6 @@ type WriteLockFn func(context.Context)
 type UnlockFn func(context.Context)
 
 type AddrTree interface {
-	SetLockHandlers(ReadLockFn, ReadUnlockFn, WriteLockFn, UnlockFn)
 	Insert(context.Context, string, interface{}) (OpResult, error)
 	Delete(context.Context, string) (OpResult, interface{}, error)
 	Search(context.Context, string) (OpResult, interface{}, error)
