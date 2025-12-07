@@ -266,6 +266,7 @@ func (t *Tree[T]) Insert(ctx context.Context, key []byte, mask []byte, value *T)
 //	key   - key to find expressed as byte slice.
 //	mask  - mask for the key expressed as byte slice.
 //	mType - type of match to perform (Exact/Partial)
+//	nodeAncestors - stack of ancestor nodes. Optional argument.
 //
 // Returns:
 //
@@ -273,14 +274,14 @@ func (t *Tree[T]) Insert(ctx context.Context, key []byte, mask []byte, value *T)
 //	*treeNodeStack - stack of nodes traversed during the search
 //	OpResult  - result of the operation
 //	error     - error if any
-func (t *Tree[T]) find(key []byte, mask []byte, mType MatchType) (*Node[T], *NodeStack[T], OpResult, error) {
+func (t *Tree[T]) find(key []byte, mask []byte, mType MatchType, nodeAncestors *NodeStack[T]) (*Node[T], OpResult, error) {
 	if t.IsEmpty() {
-		return nil, nil, NoMatch, ErrKeyNotFound
+		return nil, NoMatch, ErrKeyNotFound
 	}
 
 	keyLen := len(key)
 	if keyLen <= 0 {
-		return nil, nil, Error, fmt.Errorf("invalid key length %d", keyLen)
+		return nil, Error, fmt.Errorf("invalid key length %d", keyLen)
 	}
 
 	match := msbByteVal
@@ -290,14 +291,12 @@ func (t *Tree[T]) find(key []byte, mask []byte, mType MatchType) (*Node[T], *Nod
 	// The only way to store this node is to mark
 	// the root as terminal. This is not supported.
 	if match != match&mask[maskIdx] {
-		return nil, nil, Error, ErrInvalidKeyMask
+		return nil, Error, ErrInvalidKeyMask
 	}
 
 	// Start from root
 	node := t.root.Node
 	ret := Match
-
-	treeNodeStack := NewNodeStack[T]()
 
 	// Traverse down the tree as far as possible.
 	for nil != node && match == match&mask[maskIdx] {
@@ -309,8 +308,10 @@ func (t *Tree[T]) find(key []byte, mask []byte, mType MatchType) (*Node[T], *Nod
 			break
 		}
 
-		// Save the traversed node
-		treeNodeStack.Push(node)
+		// Save the traversed node if asked for
+		if nodeAncestors != nil {
+			nodeAncestors.Push(node)
+		}
 
 		// Bit 1 goes to right child, bit 0 goes to left child.
 		if match == match&key[maskIdx] {
@@ -337,10 +338,10 @@ func (t *Tree[T]) find(key []byte, mask []byte, mType MatchType) (*Node[T], *Nod
 
 	// For Exact match, we must end up on a terminal node
 	if nil != node && node.IsTerminal() {
-		return node, treeNodeStack, ret, nil
+		return node, ret, nil
 	}
 
-	return nil, nil, NoMatch, ErrKeyNotFound
+	return nil, NoMatch, ErrKeyNotFound
 }
 
 // Delete a key from the prefix tree. Will write lock the tree when deleting.
@@ -365,8 +366,11 @@ func (t *Tree[T]) Delete(ctx context.Context, key []byte, mask []byte) (OpResult
 		t.unlock(ctx)
 	}()
 
+	// Stack of ancestors to the node we are searching for
+	nodeAncestors := NewNodeStack[T]()
+
 	// Find the node to delete. It must be an exact match for deletion.
-	node, nodeAncestors, result, err := t.find(key, mask, Exact)
+	node, result, err := t.find(key, mask, Exact, nodeAncestors)
 	if nil != err || Match != result {
 		return Error, nil, err
 	}
@@ -441,7 +445,7 @@ func (t *Tree[T]) Search(ctx context.Context, key []byte, mask []byte, mType Mat
 	}()
 
 	// Find the node. Match type is determined by caller.
-	node, _, result, err := t.find(key, mask, mType)
+	node, result, err := t.find(key, mask, mType, nil)
 	if nil != err || Match != result {
 		return Error, nil, err
 	}
