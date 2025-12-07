@@ -68,45 +68,35 @@ func (t *Tree[T]) IsEmpty() bool {
 }
 
 func (t *Tree[T]) rlock(ctx context.Context) {
-	if nil == t || nil == t.rlockFn {
-		return
+	if t.rlockFn != nil {
+		t.rlockFn(ctx)
 	}
-
-	t.rlockFn(ctx)
 }
 
 func (t *Tree[T]) runlock(ctx context.Context) {
-	if nil == t || nil == t.runlockFn {
-		return
+	if t.runlockFn != nil {
+		t.runlockFn(ctx)
 	}
-
-	t.runlockFn(ctx)
 }
 
 func (t *Tree[T]) wlock(ctx context.Context) {
-	if nil == t || nil == t.wlockFn {
-		return
+	if t.wlockFn != nil {
+		t.wlockFn(ctx)
 	}
-
-	t.wlockFn(ctx)
 }
 
 func (t *Tree[T]) unlock(ctx context.Context) {
-	if nil == t || nil == t.unlockFn {
-		return
+	if t.unlockFn != nil {
+		t.unlockFn(ctx)
 	}
-
-	t.unlockFn(ctx)
 }
 
 func (t *Tree[T]) incrNumNodes() {
-	if nil != t {
-		t.numNodes++
-	}
+	t.numNodes++
 }
 
 func (t *Tree[T]) decrNumNodes() {
-	if nil != t && t.numNodes > 0 {
+	if t.numNodes > 0 {
 		t.numNodes--
 	}
 }
@@ -131,10 +121,6 @@ var (
 //	OpResult - result of the operation
 //	error    - error if any
 func (t *Tree[T]) Insert(ctx context.Context, key []byte, mask []byte, value *T) (OpResult, error) {
-	if nil == t {
-		return Error, ErrInvalidPrefixTree
-	}
-
 	// key and mask lengths must be the same
 	if len(key) != len(mask) {
 		return Error, ErrInvalidKeyMask
@@ -288,10 +274,6 @@ func (t *Tree[T]) Insert(ctx context.Context, key []byte, mask []byte, value *T)
 //	OpResult  - result of the operation
 //	error     - error if any
 func (t *Tree[T]) find(key []byte, mask []byte, mType MatchType) (*Node[T], *NodeStack[T], OpResult, error) {
-	if nil == t {
-		return nil, nil, Error, ErrInvalidPrefixTree
-	}
-
 	if t.IsEmpty() {
 		return nil, nil, NoMatch, ErrKeyNotFound
 	}
@@ -374,10 +356,6 @@ func (t *Tree[T]) find(key []byte, mask []byte, mType MatchType) (*Node[T], *Nod
 //	interface{} - value associated with the deleted key
 //	error    - error if any
 func (t *Tree[T]) Delete(ctx context.Context, key []byte, mask []byte) (OpResult, *T, error) {
-	if nil == t {
-		return Error, nil, ErrInvalidPrefixTree
-	}
-
 	if len(key) != len(mask) {
 		return Error, nil, ErrInvalidKeyMask
 	}
@@ -426,7 +404,7 @@ func (t *Tree[T]) Delete(ctx context.Context, key []byte, mask []byte) (OpResult
 
 		node = parent
 
-		// If the new node is a leaf, terminal or root, break
+		// If the new node is not a leaf, is a terminal or root, break
 		if !node.IsLeaf() || node.IsTerminal() || t.IsRoot(node) {
 			break
 		}
@@ -453,10 +431,6 @@ func (t *Tree[T]) Delete(ctx context.Context, key []byte, mask []byte) (OpResult
 //	interface{} - value associated with the found key
 //	error    - error if any
 func (t *Tree[T]) Search(ctx context.Context, key []byte, mask []byte, mType MatchType) (OpResult, *T, error) {
-	if nil == t {
-		return Error, nil, ErrInvalidPrefixTree
-	}
-
 	if len(key) != len(mask) {
 		return Error, nil, ErrInvalidKeyMask
 	}
@@ -526,10 +500,6 @@ func (t *Tree[T]) SearchPartial(ctx context.Context, key []byte, mask []byte) (O
 //
 //	error    - error if any
 func (t *Tree[T]) Walk(ctx context.Context, walkerFn TreeWalkerFn[T]) error {
-	if nil == t {
-		return ErrInvalidPrefixTree
-	}
-
 	if nil == walkerFn {
 		return ErrNoWalkerFunction
 	}
