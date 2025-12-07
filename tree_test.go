@@ -21,8 +21,8 @@ func TestTree_Insert_Search_Delete(t *testing.T) {
 		t.Fatalf("Insert failed: res=%v err=%v", res, err)
 	}
 
-	if tr.NumNodes != 1 {
-		t.Fatalf("expected NumNodes 1 got %d", tr.NumNodes)
+	if tr.numNodes != 1 {
+		t.Fatalf("expected NumNodes 1 got %d", tr.numNodes)
 	}
 
 	// duplicate insert returns Dup
@@ -58,8 +58,8 @@ func TestTree_Insert_Search_Delete(t *testing.T) {
 	if *pval != val {
 		t.Fatalf("Delete returned wrong value: %v", val)
 	}
-	if tr.NumNodes != 0 {
-		t.Fatalf("expected NumNodes 0 got %d", tr.NumNodes)
+	if tr.numNodes != 0 {
+		t.Fatalf("expected NumNodes 0 got %d", tr.numNodes)
 	}
 
 	// delete non-existent should return error
@@ -110,8 +110,8 @@ func TestTree_Partial_Prefixs(t *testing.T) {
 	if *pval != vnet {
 		t.Fatalf("Delete returned wrong value for prefix: %v", *pval)
 	}
-	if tr.NumNodes != 0 {
-		t.Fatalf("expected NumNodes 0 got %d", tr.NumNodes)
+	if tr.numNodes != 0 {
+		t.Fatalf("expected NumNodes 0 got %d", tr.numNodes)
 	}
 
 	// search after delete should fail
@@ -141,8 +141,8 @@ func TestTree_Partial_Prefixs(t *testing.T) {
 	if *pval != valagain {
 		t.Fatalf("Delete with partial key returned wrong value: %v", *pval)
 	}
-	if tr.NumNodes != 0 {
-		t.Fatalf("expected NumNodes 0 got %d", tr.NumNodes)
+	if tr.numNodes != 0 {
+		t.Fatalf("expected NumNodes 0 got %d", tr.numNodes)
 	}
 }
 
@@ -186,6 +186,211 @@ func TestTree_LockingHandlers(t *testing.T) {
 	if called.w < 2 || called.u < 2 {
 		t.Fatalf("expected write lock/unlock called twice, got w=%d u=%d", called.w, called.u)
 	}
+}
+func TestWalk_DepthFirstTraversal(t *testing.T) {
+	ctx := context.Background()
+	tr := NewTree[string]()
+
+	// Build a small tree with controlled structure
+	// Insert keys to create a specific tree shape:
+	// 10000000 (bit 0) = left, binary 128
+	// 01000000 (bit 1) = right, binary 64
+	// etc.
+
+	// Key1: 10000000 (128) with full mask
+	key1 := []byte{128}
+	mask1 := []byte{0xFF}
+	val1 := "node1"
+	tr.Insert(ctx, key1, mask1, &val1)
+
+	// Key2: 01000000 (64) with full mask
+	key2 := []byte{64}
+	mask2 := []byte{0xFF}
+	val2 := "node2"
+	tr.Insert(ctx, key2, mask2, &val2)
+
+	// Key3: 11000000 (192) with full mask
+	key3 := []byte{192}
+	mask3 := []byte{0xFF}
+	val3 := "node3"
+	tr.Insert(ctx, key3, mask3, &val3)
+
+	// Key4: 00100000 (32) with full mask
+	key4 := []byte{32}
+	mask4 := []byte{0xFF}
+	val4 := "node4"
+	tr.Insert(ctx, key4, mask4, &val4)
+
+	// Walk the tree and collect all values
+	visited := []string{}
+	err := tr.Walk(ctx, func(c context.Context, v *string) error {
+		visited = append(visited, *v)
+		return nil
+	})
+
+	if err != nil {
+		t.Fatalf("Walk failed: %v", err)
+	}
+
+	// Verify all nodes were visited
+	if len(visited) != 4 {
+		t.Fatalf("expected 4 visited nodes, got %d: %v", len(visited), visited)
+	}
+
+	// Check that all values are present (order may vary for DFS)
+	expected := map[string]bool{"node1": true, "node2": true, "node3": true, "node4": true}
+	for _, v := range visited {
+		if !expected[v] {
+			t.Fatalf("unexpected node visited: %s", v)
+		}
+		delete(expected, v)
+	}
+
+	if len(expected) > 0 {
+		t.Fatalf("some nodes were not visited: %v", expected)
+	}
+}
+
+func TestWalk_SinglePath(t *testing.T) {
+	ctx := context.Background()
+	tr := NewTree[int]()
+
+	// Create a simple linear path: root -> node1 -> node2
+	// Insert two keys that share a prefix but diverge later
+	key1 := []byte{0xC0, 0x00} // 11000000 00000000
+	mask1 := []byte{0xFF, 0xFF}
+	val1 := 100
+	tr.Insert(ctx, key1, mask1, &val1)
+
+	key2 := []byte{0xC0, 0x80} // 11000000 10000000
+	mask2 := []byte{0xFF, 0xFF}
+	val2 := 200
+	tr.Insert(ctx, key2, mask2, &val2)
+
+	visited := []int{}
+	err := tr.Walk(ctx, func(c context.Context, v *int) error {
+		visited = append(visited, *v)
+		return nil
+	})
+
+	if err != nil {
+		t.Fatalf("Walk failed: %v", err)
+	}
+
+	if len(visited) != 2 {
+		t.Fatalf("expected 2 nodes, got %d", len(visited))
+	}
+
+	// Both values should be present
+	found := make(map[int]bool)
+	for _, v := range visited {
+		found[v] = true
+	}
+	if !found[100] || !found[200] {
+		t.Fatalf("not all values found in walk: %v", visited)
+	}
+}
+
+func TestWalk_OnlyTerminalNodes(t *testing.T) {
+	// Verify that Walk only calls walkerFn for terminal nodes,
+	// not intermediate nodes
+	ctx := context.Background()
+	tr := NewTree[string]()
+
+	// Insert a long key that creates many intermediate nodes
+	key := []byte{0xFF, 0xFF, 0xFF}
+	mask := []byte{0xFF, 0xFF, 0xFF}
+	val := "deep_value"
+	tr.Insert(ctx, key, mask, &val)
+
+	// Insert a shorter prefix that shares bits with the long key
+	key2 := []byte{0xFF, 0x00, 0x00}
+	mask2 := []byte{0xFF, 0x00, 0x00}
+	val2 := "short_value"
+	tr.Insert(ctx, key2, mask2, &val2)
+
+	visited := []string{}
+	err := tr.Walk(ctx, func(c context.Context, v *string) error {
+		visited = append(visited, *v)
+		return nil
+	})
+
+	if err != nil {
+		t.Fatalf("Walk failed: %v", err)
+	}
+
+	// Should only visit the 2 terminal nodes, not intermediate nodes
+	if len(visited) != 2 {
+		t.Fatalf("expected 2 terminal nodes visited, got %d", len(visited))
+	}
+
+	found := make(map[string]bool)
+	for _, v := range visited {
+		found[v] = true
+	}
+	if !found["deep_value"] || !found["short_value"] {
+		t.Fatalf("not all terminal values found: %v", visited)
+	}
+}
+
+func TestWalk_EmptyTree(t *testing.T) {
+	ctx := context.Background()
+	tr := NewTree[string]()
+
+	// Walk empty tree should not call walkerFn
+	callCount := 0
+	err := tr.Walk(ctx, func(c context.Context, v *string) error {
+		callCount++
+		return nil
+	})
+
+	if err != nil {
+		t.Fatalf("Walk on empty tree failed: %v", err)
+	}
+
+	if callCount != 0 {
+		t.Fatalf("expected 0 calls to walkerFn on empty tree, got %d", callCount)
+	}
+}
+
+func TestWalk_StopOnError(t *testing.T) {
+	ctx := context.Background()
+	tr := NewTree[string]()
+
+	// Insert multiple nodes
+	val1 := "node1"
+	tr.Insert(ctx, []byte{0x80}, []byte{0xFF}, &val1)
+	val2 := "node2"
+	tr.Insert(ctx, []byte{0x40}, []byte{0xFF}, &val2)
+	val3 := "node3"
+	tr.Insert(ctx, []byte{0x20}, []byte{0xFF}, &val3)
+
+	// Walk with error return
+	visited := []string{}
+	testErr := &testError{"intentional error"}
+	err := tr.Walk(ctx, func(c context.Context, v *string) error {
+		visited = append(visited, *v)
+		if len(visited) == 2 {
+			return testErr
+		}
+		return nil
+	})
+
+	if err != testErr {
+		t.Fatalf("expected testErr to be returned, got %v", err)
+	}
+
+	if len(visited) != 2 {
+		t.Fatalf("expected walk to stop after 2 nodes, got %d", len(visited))
+	}
+}
+
+type testError struct {
+	msg string
+}
+
+func (e *testError) Error() string {
+	return e.msg
 }
 
 // Benchmark Tests

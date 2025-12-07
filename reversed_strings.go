@@ -128,3 +128,20 @@ func (rst *ReversedStringsTree[T]) SearchExact(ctx context.Context, s string) (O
 func (rst *ReversedStringsTree[T]) GetNodesCount() uint64 {
 	return rst.stree.GetNodesCount()
 }
+
+// Walk the tree and call passed function for all nodes
+// Arguments:
+//
+//	ctx - context for the operaton
+//	callback - function to be called for every value in the tree
+//
+// Returns:
+//
+//	err - nil if successful else an error
+func (rst *ReversedStringsTree[T]) Walk(ctx context.Context, callback WalkerFn[T]) error {
+	rst.stree.Walk(ctx, func(ctx context.Context, value *T) error {
+		return callback(ctx, value)
+	})
+
+	return nil
+}

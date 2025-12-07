@@ -15,9 +15,9 @@ import (
 )
 
 type Tree[T any] struct {
-	root *Node[T]
+	root *RootNode[T]
 
-	NumNodes uint64
+	numNodes uint64
 
 	rlockFn   ReadLockFn
 	runlockFn ReadUnlockFn
@@ -25,14 +25,17 @@ type Tree[T any] struct {
 	unlockFn  UnlockFn
 }
 
+// Walker function
+type TreeWalkerFn[T any] func(context.Context, *T) error
+
 // Returns a new prefix tree
 // Returns:
 //
 //	*Tree - pointer to the new prefix tree
 func NewTree[T any]() *Tree[T] {
 	return &Tree[T]{
-		root:     RootNode[T](),
-		NumNodes: 0,
+		root:     NewRootNode[T](),
+		numNodes: 0,
 	}
 }
 
@@ -54,6 +57,14 @@ func NewTreeWithLockHandlers[T any](rlockFn ReadLockFn, runlockFn ReadUnlockFn, 
 	t.wlockFn = wlockFn
 	t.unlockFn = unlockFn
 	return t
+}
+
+func (t *Tree[T]) IsRoot(node *Node[T]) bool {
+	return t.root.Node == node
+}
+
+func (t *Tree[T]) IsEmpty() bool {
+	return t.numNodes == 0
 }
 
 func (t *Tree[T]) rlock(ctx context.Context) {
@@ -90,13 +101,13 @@ func (t *Tree[T]) unlock(ctx context.Context) {
 
 func (t *Tree[T]) incrNumNodes() {
 	if nil != t {
-		t.NumNodes++
+		t.numNodes++
 	}
 }
 
 func (t *Tree[T]) decrNumNodes() {
-	if nil != t && t.NumNodes > 0 {
-		t.NumNodes--
+	if nil != t && t.numNodes > 0 {
+		t.numNodes--
 	}
 }
 
@@ -107,11 +118,13 @@ var (
 // Insert a key into the prefix tree. Will write lock the tree when inserting.
 // Arguments:
 //
-//	ctx  - context for the lock functions.
-//	key  - key to insert expressed as byte slice.
-//	mask - mask for the key expressed as byte slice. A mask with non-contiguous
-//		   1s is considered unexpected and will lead to undefined behavior.
-//	value - value associated with the key. This is optional and can be nil.
+//		ctx  - context for the lock functions.
+//		key  - key to insert expressed as byte slice.
+//		mask - mask for the key expressed as byte slice. A mask with non-contiguous
+//			   1s is considered unexpected and will lead to undefined behavior.
+//	           The very first bit of mask cannot be 0. The only way to store this node is to mark
+//	           the root as terminal. This is not supported.
+//		value - value associated with the key. This is optional and can be nil.
 //
 // Returns:
 //
@@ -135,14 +148,21 @@ func (t *Tree[T]) Insert(ctx context.Context, key []byte, mask []byte, value *T)
 	maskIdx := 0
 	match := msbByteVal
 
+	// The very first bit of mask cannot be 0
+	// The only way to store this node is to mark
+	// the root as terminal. This is not supported.
+	if match != match&mask[maskIdx] {
+		return Error, ErrInvalidKeyMask
+	}
+
 	t.wlock(ctx)
 	defer func() {
 		t.unlock(ctx)
 	}()
 
 	// Start from root
-	node := t.root
-	next := t.root
+	node := t.root.Node
+	next := t.root.Node
 
 	// Traverse down the tree as far as possible.
 	// Note: the first occurence of 0 in the mask will terminate the traversal.
@@ -184,6 +204,12 @@ func (t *Tree[T]) Insert(ctx context.Context, key []byte, mask []byte, value *T)
 	// We found an existing node. This condition will evaluate to true
 	// if we have covered the entire key/mask in the traversal above.
 	if nil != next {
+		// Cannot be hit but check just in case.
+		// This cannot be the root node
+		if t.IsRoot(node) {
+			return Error, ErrInsertFailed
+		}
+
 		// If the node is already terminal, it's a duplicate insert
 		// It is left to the caller to determine if this is an error.
 		// We will not return an error here.
@@ -257,13 +283,17 @@ func (t *Tree[T]) Insert(ctx context.Context, key []byte, mask []byte, value *T)
 //
 // Returns:
 //
-//		*treeNode - pointer to the found node
-//	 *treeNodeStack - stack of nodes traversed during the search
-//		OpResult  - result of the operation
-//		error     - error if any
+//	*treeNode - pointer to the found node
+//	*treeNodeStack - stack of nodes traversed during the search
+//	OpResult  - result of the operation
+//	error     - error if any
 func (t *Tree[T]) find(key []byte, mask []byte, mType MatchType) (*Node[T], *NodeStack[T], OpResult, error) {
 	if nil == t {
 		return nil, nil, Error, ErrInvalidPrefixTree
+	}
+
+	if t.IsEmpty() {
+		return nil, nil, NoMatch, ErrKeyNotFound
 	}
 
 	keyLen := len(key)
@@ -274,8 +304,15 @@ func (t *Tree[T]) find(key []byte, mask []byte, mType MatchType) (*Node[T], *Nod
 	match := msbByteVal
 	maskIdx := 0
 
+	// The very first bit of mask cannot be 0
+	// The only way to store this node is to mark
+	// the root as terminal. This is not supported.
+	if match != match&mask[maskIdx] {
+		return nil, nil, Error, ErrInvalidKeyMask
+	}
+
 	// Start from root
-	node := t.root
+	node := t.root.Node
 	ret := Match
 
 	treeNodeStack := NewNodeStack[T]()
@@ -357,7 +394,7 @@ func (t *Tree[T]) Delete(ctx context.Context, key []byte, mask []byte) (OpResult
 	}
 
 	// This condition should never be hit
-	if nil == node || !node.IsTerminal() || node.IsRoot() {
+	if nil == node || !node.IsTerminal() || t.IsRoot(node) {
 		return Error, nil, ErrKeyNotFound
 	}
 
@@ -390,7 +427,7 @@ func (t *Tree[T]) Delete(ctx context.Context, key []byte, mask []byte) (OpResult
 		node = parent
 
 		// If the new node is a leaf, terminal or root, break
-		if !node.IsLeaf() || node.IsTerminal() || node.IsRoot() {
+		if !node.IsLeaf() || node.IsTerminal() || t.IsRoot(node) {
 			break
 		}
 	}
@@ -436,7 +473,7 @@ func (t *Tree[T]) Search(ctx context.Context, key []byte, mask []byte, mType Mat
 	}
 
 	// This condition should never be hit
-	if nil == node || !node.IsTerminal() || node.IsRoot() {
+	if nil == node || !node.IsTerminal() || t.IsRoot(node) {
 		return Error, nil, ErrKeyNotFound
 	}
 
@@ -474,4 +511,102 @@ func (t *Tree[T]) SearchExact(ctx context.Context, key []byte, mask []byte) (OpR
 //	error    - error if any
 func (t *Tree[T]) SearchPartial(ctx context.Context, key []byte, mask []byte) (OpResult, *T, error) {
 	return t.Search(ctx, key, mask, Partial)
+}
+
+// Walk the tree using the provided walker function. Performs a depth-first traversal.
+// The walker function is called for each node with a valid key and value.
+// The k/v pairs are returned in the order they are encountered during the traversal.
+// This might be different from the order in which they were inserted.
+// Arguments:
+//
+//	ctx        - context for the lock functions.
+//	walkerFn   - function to call for each node during the walk
+//
+// Returns:
+//
+//	error    - error if any
+func (t *Tree[T]) Walk(ctx context.Context, walkerFn TreeWalkerFn[T]) error {
+	if nil == t {
+		return ErrInvalidPrefixTree
+	}
+
+	if nil == walkerFn {
+		return ErrNoWalkerFunction
+	}
+
+	if t.IsEmpty() {
+		return nil
+	}
+
+	t.rlock(ctx)
+	defer func() {
+		t.runlock(ctx)
+	}()
+
+	// Node stack
+	treeNodeStack := NewNodeStack[T]()
+
+	// Start at root
+	treeNodeStack.Push(t.root.Node)
+
+	// Start looping
+	for !treeNodeStack.IsEmpty() {
+		// Peek at the top node in the stack
+		node := treeNodeStack.Peek()
+
+		// If there is a left child, push the left child onto the stack
+		// and continue
+		if nil != node.left {
+			treeNodeStack.Push(node.left)
+			continue
+		}
+
+		// If there is a right child, add the right child to the stack
+		if nil != node.right {
+			treeNodeStack.Push(node.right)
+			continue
+		}
+
+		// Pop the current node from the stack
+		node = treeNodeStack.Pop()
+
+		// Ignore root
+		if t.IsRoot(node) {
+			continue
+		}
+
+		// Left node must be a terminal node. Call the walker function
+		if node.IsTerminal() {
+			err := walkerFn(ctx, node.value)
+			if nil != err {
+				return err
+			}
+		}
+
+		// Unwind the stack to find the next unvisited right child
+		for !treeNodeStack.IsEmpty() {
+			parent := treeNodeStack.Peek()
+
+			// If the parent has a right child and the right child
+			// is not the current node. Push the right child onto
+			// the stack and break.
+			if nil != parent.right && parent.right != node {
+				treeNodeStack.Push(parent.right)
+				break
+			}
+
+			// Pop the parent node
+			node = treeNodeStack.Pop()
+
+			// If the popped node is not root node and is a terminal node, call the walker function
+			if !t.IsRoot(node) && node.IsTerminal() {
+				err := walkerFn(ctx, node.value)
+				if nil != err {
+					return err
+				}
+			}
+		}
+	}
+
+	return nil
 }

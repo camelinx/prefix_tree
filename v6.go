@@ -172,5 +172,22 @@ func (v6t *V6Tree[T]) SearchExact(ctx context.Context, saddr string) (OpResult, 
 //
 //	uint64 - number of nodes in the tree
 func (v6t *V6Tree[T]) GetNodesCount() uint64 {
-	return v6t.tree.NumNodes
+	return v6t.tree.numNodes
+}
+
+// Walk the tree and call passed function for all nodes
+// Arguments:
+//
+//	ctx - context for the operaton
+//	callback - function to be called for every value in the tree
+//
+// Returns:
+//
+//	err - nil if successful else an error
+func (v6t *V6Tree[T]) Walk(ctx context.Context, callback WalkerFn[T]) error {
+	v6t.tree.Walk(ctx, func(ctx context.Context, value *T) error {
+		return callback(ctx, value)
+	})
+
+	return nil
 }

@@ -61,6 +61,29 @@ func TestStrings(t *testing.T) {
 			t.Fatalf("Found non existent key %s", url)
 		}
 	}
+
+	for i, url := range urls {
+		ival := i
+		res, err := st.Insert(ctx, url, &ival)
+		if err != nil || res != Ok {
+			t.Fatalf("Failed to insert %s", url)
+		}
+	}
+
+	expectedValuesCount := len(urls)
+	walkedValuesCount := 0
+	st.Walk(ctx, func(ctx context.Context, ival *int) error {
+		if *ival >= expectedValuesCount {
+			t.Fatalf("Unexpected value %d returned in walk. Expected a value less than %d", *ival, expectedValuesCount)
+		}
+
+		walkedValuesCount++
+		return nil
+	})
+
+	if walkedValuesCount != expectedValuesCount {
+		t.Fatalf("Expected %d value in walk. Actual walked values count is %d", expectedValuesCount, walkedValuesCount)
+	}
 }
 
 func generateStringKeys(n int) []string {

@@ -136,5 +136,22 @@ func (st *StringsTree[T]) SearchExact(ctx context.Context, s string) (OpResult, 
 //
 //	uint64 - number of nodes in the tree
 func (st *StringsTree[T]) GetNodesCount() uint64 {
-	return st.tree.NumNodes
+	return st.tree.numNodes
+}
+
+// Walk the tree and call passed function for all nodes
+// Arguments:
+//
+//	ctx - context for the operaton
+//	callback - function to be called for every value in the tree
+//
+// Returns:
+//
+//	err - nil if successful else an error
+func (st *StringsTree[T]) Walk(ctx context.Context, callback WalkerFn[T]) error {
+	st.tree.Walk(ctx, func(ctx context.Context, value *T) error {
+		return callback(ctx, value)
+	})
+
+	return nil
 }

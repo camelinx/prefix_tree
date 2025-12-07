@@ -33,7 +33,7 @@ func basicV4Tests(t *testing.T) {
 }
 
 func randomV4Tests(t *testing.T) {
-	v4t := NewV4Tree[string]()
+	v4t := NewV4Tree[int]()
 
 	for class := ipv4AddrClassMin + 1; class < ipv4AddrClassMax; class++ {
 		v4gen := newIpv4Generator()
@@ -106,6 +106,29 @@ func randomV4Tests(t *testing.T) {
 			if nil == err || res != Error {
 				t.Fatalf("Deleted non existent key %s", v4gen.block[i])
 			}
+		}
+
+		v4WalkTree := NewV4Tree[int]()
+		for i := 0; i < v4gen.count; i++ {
+			ival := i
+			res, err := v4WalkTree.Insert(ctx, v4gen.block[i], &ival)
+			if err != nil || res != Ok {
+				t.Fatalf("Failed to insert %s", v4gen.block[i])
+			}
+		}
+
+		walkedValuesCount := 0
+		v4WalkTree.Walk(ctx, func(ctx context.Context, ival *int) error {
+			if *ival >= v4gen.count {
+				t.Fatalf("Unexpected value %d returned in walk. Expected a value less than %d", *ival, v4gen.count)
+			}
+
+			walkedValuesCount++
+			return nil
+		})
+
+		if walkedValuesCount != v4gen.count {
+			t.Fatalf("Expected %d values in walk. Actual walked values count is %d", v4gen.count, walkedValuesCount)
 		}
 	}
 }

@@ -5,23 +5,23 @@ type Node[T any] struct {
 	right *Node[T]
 	left  *Node[T]
 
-	root     bool
 	terminal bool
 	value    *T // Can be nil
+}
+
+// Root node. Same as Node.
+type RootNode[T any] struct {
+	*Node[T]
 }
 
 func NewNode[T any]() *Node[T] {
 	return &Node[T]{terminal: false}
 }
 
-func RootNode[T any]() *Node[T] {
-	node := NewNode[T]()
-	node.root = true
-	return node
-}
-
-func (n *Node[T]) IsRoot() bool {
-	return n.root
+func NewRootNode[T any]() *RootNode[T] {
+	return &RootNode[T]{
+		Node: NewNode[T](),
+	}
 }
 
 func (n *Node[T]) IsLeaf() bool {
@@ -51,16 +51,19 @@ type NodeStack[T any] struct {
 	nodes []*Node[T]
 }
 
+// Creates a new NodeStack
 func NewNodeStack[T any]() *NodeStack[T] {
 	return &NodeStack[T]{
 		nodes: make([]*Node[T], 0),
 	}
 }
 
+// Pushes a node onto the stack
 func (ns *NodeStack[T]) Push(node *Node[T]) {
 	ns.nodes = append(ns.nodes, node)
 }
 
+// Pops a node from the stack
 func (ns *NodeStack[T]) Pop() *Node[T] {
 	if len(ns.nodes) == 0 {
 		return nil
@@ -71,10 +74,21 @@ func (ns *NodeStack[T]) Pop() *Node[T] {
 	return node
 }
 
+// Peek returns the top node without removing it from the stack
+func (ns *NodeStack[T]) Peek() *Node[T] {
+	if len(ns.nodes) == 0 {
+		return nil
+	}
+
+	return ns.nodes[len(ns.nodes)-1]
+}
+
+// Checks if the stack is empty
 func (ns *NodeStack[T]) IsEmpty() bool {
 	return len(ns.nodes) == 0
 }
 
+// Returns the size of the stack
 func (ns *NodeStack[T]) Size() int {
 	return len(ns.nodes)
 }
