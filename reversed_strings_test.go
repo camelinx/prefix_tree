@@ -6,7 +6,7 @@ import (
 )
 
 func TestReversedStrings(t *testing.T) {
-	st := NewStringsTree[int]()
+	rstree := NewReversedStringsTree[int]()
 
 	domains := []string{
 		"google.com",
@@ -23,12 +23,12 @@ func TestReversedStrings(t *testing.T) {
 	ctx := context.Background()
 	for i, domain := range domains {
 		ival := i
-		res, err := st.Insert(ctx, domain, &ival)
+		res, err := rstree.Insert(ctx, domain, &ival)
 		if err != nil || res != Ok {
 			t.Fatalf("Failed to insert %s", domain)
 		}
 
-		res, pival, err := st.Search(ctx, domain)
+		res, pival, err := rstree.Search(ctx, domain)
 		if err != nil || res != Match {
 			t.Fatalf("Failed to find %s", domain)
 		}
@@ -36,7 +36,7 @@ func TestReversedStrings(t *testing.T) {
 			t.Fatalf("Invalid value for %s: expected %d, got %v", domain, ival, pival)
 		}
 
-		res, pival, err = st.SearchExact(ctx, domain)
+		res, pival, err = rstree.SearchExact(ctx, domain)
 		if err != nil || res != Match {
 			t.Fatalf("Failed to find (exact) %s", domain)
 		}
@@ -44,12 +44,12 @@ func TestReversedStrings(t *testing.T) {
 			t.Fatalf("Invalid value for (exact) %s: expected %d, got %v", domain, ival, pival)
 		}
 
-		res, err = st.Insert(ctx, domain, &ival)
+		res, err = rstree.Insert(ctx, domain, &ival)
 		if err != nil || res != Dup {
 			t.Fatalf("Failed to recognize %s as duplicate", domain)
 		}
 
-		res, pival, err = st.Delete(ctx, domain)
+		res, pival, err = rstree.Delete(ctx, domain)
 		if err != nil || res != Match {
 			t.Fatalf("Failed to delete %s", domain)
 		}
@@ -57,7 +57,7 @@ func TestReversedStrings(t *testing.T) {
 			t.Fatalf("Invalid value for deleted %s: expected %d, got %v", domain, ival, pival)
 		}
 
-		res, _, err = st.Search(ctx, domain)
+		res, _, err = rstree.Search(ctx, domain)
 		if nil == err || res != Error {
 			t.Fatalf("Found non existent key %s", domain)
 		}
@@ -65,7 +65,7 @@ func TestReversedStrings(t *testing.T) {
 
 	for i, domain := range domains {
 		ival := i
-		res, err := st.Insert(ctx, domain, &ival)
+		res, err := rstree.Insert(ctx, domain, &ival)
 		if err != nil || res != Ok {
 			t.Fatalf("Failed to insert %s", domain)
 		}
@@ -73,7 +73,7 @@ func TestReversedStrings(t *testing.T) {
 
 	expectedValuesCount := len(domains)
 	walkedValuesCount := 0
-	st.Walk(ctx, func(ctx context.Context, ival *int) error {
+	rstree.Walk(ctx, func(ctx context.Context, ival *int) error {
 		if *ival >= expectedValuesCount {
 			t.Fatalf("Unexpected value %d returned in walk. Expected a value less than %d", *ival, expectedValuesCount)
 		}
@@ -84,6 +84,87 @@ func TestReversedStrings(t *testing.T) {
 
 	if walkedValuesCount != expectedValuesCount {
 		t.Fatalf("Expected %d value in walk. Actual walked values count is %d", expectedValuesCount, walkedValuesCount)
+	}
+}
+
+func TestReversedStringsPrefixSearch(t *testing.T) {
+	rstree := NewReversedStringsTree[int]()
+
+	domains := []string{
+		"google.com",
+		"yahoo.com",
+		"example.org",
+	}
+
+	searchDomains := map[string]int{
+		"mail.google.com":      0,
+		"drive.google.com":     0,
+		"news.yahoo.com":       1,
+		"about.yahoo.com":      1,
+		"sub.example.org":      2,
+		"test.sub.example.org": 2,
+	}
+
+	failDomains := []string{
+		"www.cnn.com",
+		"www.bbc.co.uk",
+		"www.fifa.com",
+		"wikipedia.org",
+	}
+
+	ctx := context.Background()
+	for i, domain := range domains {
+		ival := i
+		res, err := rstree.Insert(ctx, domain, &ival)
+		if err != nil || res != Ok {
+			t.Fatalf("Failed to insert %s", domain)
+		}
+	}
+
+	for searchDomain, ival := range searchDomains {
+		res, pival, err := rstree.Search(ctx, searchDomain)
+		if err != nil || res != PartialMatch {
+			t.Fatalf("Failed to find prefix domain %s, result = %d", searchDomain, res)
+		}
+		if pival == nil {
+			t.Fatalf("Expected prefix domain %s match value %d, got nil", searchDomain, ival)
+		}
+		if *pival != ival {
+			t.Fatalf("Expected prefix domain %s match value %d, got %d", searchDomain, ival, *pival)
+		}
+
+		res, _, err = rstree.SearchExact(ctx, searchDomain)
+		if err == nil || res == Match {
+			t.Fatalf("Found non existent exact domain %s, result = %d", searchDomain, res)
+		}
+	}
+
+	for _, failDomain := range failDomains {
+		res, _, err := rstree.Search(ctx, failDomain)
+		if err == nil || res == PartialMatch || res == Match {
+			t.Fatalf("Found non existent prefix domain %s, result = %d", failDomain, res)
+		}
+
+		res, _, err = rstree.SearchExact(ctx, failDomain)
+		if err == nil || res == Match {
+			t.Fatalf("Found non existent exact domain %s, result = %d", failDomain, res)
+		}
+	}
+
+	for i, domain := range domains {
+		ival := i
+		res, pival, err := rstree.Delete(ctx, domain)
+		if err != nil || res != Match {
+			t.Fatalf("Failed to delete %s", domain)
+		}
+		if pival == nil || *pival != ival {
+			t.Fatalf("Invalid value for deleted %s: expected %d, got %v", domain, ival, pival)
+		}
+
+		res, _, err = rstree.Search(ctx, domain)
+		if nil == err || res != Error {
+			t.Fatalf("Found non existent key %s", domain)
+		}
 	}
 }
 

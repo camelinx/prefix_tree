@@ -446,8 +446,21 @@ func (t *Tree[T]) Search(ctx context.Context, key []byte, mask []byte, mType Mat
 
 	// Find the node. Match type is determined by caller.
 	node, result, err := t.find(key, mask, mType, nil)
-	if nil != err || Match != result {
+	if nil != err {
 		return Error, nil, err
+	}
+
+	// Validate result based on match type
+	switch mType {
+	case Exact:
+		if result != Match {
+			return Error, nil, err
+		}
+
+	case Partial:
+		if result != Match && result != PartialMatch {
+			return Error, nil, err
+		}
 	}
 
 	// This condition should never be hit
@@ -456,7 +469,7 @@ func (t *Tree[T]) Search(ctx context.Context, key []byte, mask []byte, mType Mat
 	}
 
 	// Search successful
-	return Match, node.value, nil
+	return result, node.value, nil
 }
 
 // Searches for an exact match of the key in the prefix tree.
