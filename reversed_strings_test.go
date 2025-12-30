@@ -134,19 +134,19 @@ func TestReversedStringsPrefixSearch(t *testing.T) {
 		}
 
 		res, _, err = rstree.SearchExact(ctx, searchDomain)
-		if err == nil || res == Match {
+		if err == nil || res != Error {
 			t.Fatalf("Found non existent exact domain %s, result = %d", searchDomain, res)
 		}
 	}
 
 	for _, failDomain := range failDomains {
 		res, _, err := rstree.Search(ctx, failDomain)
-		if err == nil || res == PartialMatch || res == Match {
+		if err == nil || res != Error {
 			t.Fatalf("Found non existent prefix domain %s, result = %d", failDomain, res)
 		}
 
 		res, _, err = rstree.SearchExact(ctx, failDomain)
-		if err == nil || res == Match {
+		if err == nil || res != Error {
 			t.Fatalf("Found non existent exact domain %s, result = %d", failDomain, res)
 		}
 	}
