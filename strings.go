@@ -67,7 +67,7 @@ func getMaskFromString(sb []byte) []byte {
 //
 //	OpResult - result of the insert operation
 //	error    - error, if any
-func (st *StringsTree[T]) Insert(ctx context.Context, s string, value *T) (OpResult, error) {
+func (st *StringsTree[T]) Insert(ctx context.Context, s string, value T) (OpResult, error) {
 	sb := []byte(s)
 
 	// Insert parsed address and mask into the tree
@@ -85,7 +85,7 @@ func (st *StringsTree[T]) Insert(ctx context.Context, s string, value *T) (OpRes
 //	OpResult - result of the delete operation
 //	T        - value associated with the deleted address/mask, if any
 //	error    - error, if any
-func (st *StringsTree[T]) Delete(ctx context.Context, s string) (OpResult, *T, error) {
+func (st *StringsTree[T]) Delete(ctx context.Context, s string) (OpResult, T, error) {
 	sb := []byte(s)
 
 	// Delete parsed address and mask from the tree
@@ -106,7 +106,7 @@ func (st *StringsTree[T]) Delete(ctx context.Context, s string) (OpResult, *T, e
 //	OpResult - result of the search operation
 //	T        - value associated with the found address/mask, if any
 //	error    - error, if any
-func (st *StringsTree[T]) Search(ctx context.Context, s string) (OpResult, *T, error) {
+func (st *StringsTree[T]) Search(ctx context.Context, s string) (OpResult, T, error) {
 	sb := []byte(s)
 
 	// Perform partial search for parsed address and mask in the tree
@@ -124,7 +124,7 @@ func (st *StringsTree[T]) Search(ctx context.Context, s string) (OpResult, *T, e
 //	OpResult - result of the search operation
 //	T        - value associated with the found address/mask, if any
 //	error    - error, if any
-func (st *StringsTree[T]) SearchExact(ctx context.Context, s string) (OpResult, *T, error) {
+func (st *StringsTree[T]) SearchExact(ctx context.Context, s string) (OpResult, T, error) {
 	sb := []byte(s)
 
 	// Perform exact search for parsed address and mask in the tree
@@ -149,7 +149,7 @@ func (st *StringsTree[T]) GetNodesCount() uint64 {
 //
 //	err - nil if successful else an error
 func (st *StringsTree[T]) Walk(ctx context.Context, callback WalkerFn[T]) error {
-	st.tree.Walk(ctx, func(ctx context.Context, value *T) error {
+	st.tree.Walk(ctx, func(ctx context.Context, value T) error {
 		return callback(ctx, value)
 	})
 

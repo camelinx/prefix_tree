@@ -69,7 +69,7 @@ func reverseString(s string) string {
 //
 //	OpResult - result of the insert operation
 //	error    - error, if any
-func (rst *ReversedStringsTree[T]) Insert(ctx context.Context, s string, value *T) (OpResult, error) {
+func (rst *ReversedStringsTree[T]) Insert(ctx context.Context, s string, value T) (OpResult, error) {
 	return rst.stree.Insert(ctx, reverseString(s), value)
 }
 
@@ -84,7 +84,7 @@ func (rst *ReversedStringsTree[T]) Insert(ctx context.Context, s string, value *
 //	OpResult - result of the delete operation
 //	T        - value associated with the deleted address/mask, if any
 //	error    - error, if any
-func (rst *ReversedStringsTree[T]) Delete(ctx context.Context, s string) (OpResult, *T, error) {
+func (rst *ReversedStringsTree[T]) Delete(ctx context.Context, s string) (OpResult, T, error) {
 	return rst.stree.Delete(ctx, reverseString(s))
 }
 
@@ -102,7 +102,7 @@ func (rst *ReversedStringsTree[T]) Delete(ctx context.Context, s string) (OpResu
 //	OpResult - result of the search operation
 //	T        - value associated with the found address/mask, if any
 //	error    - error, if any
-func (rst *ReversedStringsTree[T]) Search(ctx context.Context, s string) (OpResult, *T, error) {
+func (rst *ReversedStringsTree[T]) Search(ctx context.Context, s string) (OpResult, T, error) {
 	return rst.stree.Search(ctx, reverseString(s))
 }
 
@@ -117,7 +117,7 @@ func (rst *ReversedStringsTree[T]) Search(ctx context.Context, s string) (OpResu
 //	OpResult - result of the search operation
 //	T        - value associated with the found address/mask, if any
 //	error    - error, if any
-func (rst *ReversedStringsTree[T]) SearchExact(ctx context.Context, s string) (OpResult, *T, error) {
+func (rst *ReversedStringsTree[T]) SearchExact(ctx context.Context, s string) (OpResult, T, error) {
 	return rst.stree.SearchExact(ctx, reverseString(s))
 }
 
@@ -139,7 +139,7 @@ func (rst *ReversedStringsTree[T]) GetNodesCount() uint64 {
 //
 //	err - nil if successful else an error
 func (rst *ReversedStringsTree[T]) Walk(ctx context.Context, callback WalkerFn[T]) error {
-	rst.stree.Walk(ctx, func(ctx context.Context, value *T) error {
+	rst.stree.Walk(ctx, func(ctx context.Context, value T) error {
 		return callback(ctx, value)
 	})
 

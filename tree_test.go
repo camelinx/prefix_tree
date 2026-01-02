@@ -9,7 +9,7 @@ import (
 
 func TestTree_Insert_Search_Delete(t *testing.T) {
 	ctx := context.Background()
-	tr := NewTree[string]()
+	tr := NewTree[*string]()
 
 	// basic insert
 	key := []byte{0xC0, 0xA8, 0x01, 0x01} // 192.168.1.1
@@ -71,7 +71,7 @@ func TestTree_Insert_Search_Delete(t *testing.T) {
 
 func TestTree_Partial_Prefixs(t *testing.T) {
 	ctx := context.Background()
-	tr := NewTree[string]()
+	tr := NewTree[*string]()
 
 	// insert a /24 prefix: 10.0.1.0/24 -> mask first three octets
 	key := []byte{10, 0, 1, 0}
@@ -164,7 +164,7 @@ func TestTree_LockingHandlers(t *testing.T) {
 	val := "x"
 
 	// Insert should call write lock/unlock
-	_, _ = tr.Insert(ctx, key, mask, &val)
+	_, _ = tr.Insert(ctx, key, mask, val)
 	if called.w == 0 || called.u == 0 {
 		t.Fatalf("expected write lock/unlock called, got w=%d u=%d", called.w, called.u)
 	}
@@ -189,7 +189,7 @@ func TestTree_LockingHandlers(t *testing.T) {
 }
 func TestWalk_DepthFirstTraversal(t *testing.T) {
 	ctx := context.Background()
-	tr := NewTree[string]()
+	tr := NewTree[*string]()
 
 	// Build a small tree with controlled structure
 	// Insert keys to create a specific tree shape:
@@ -253,7 +253,7 @@ func TestWalk_DepthFirstTraversal(t *testing.T) {
 
 func TestWalk_SinglePath(t *testing.T) {
 	ctx := context.Background()
-	tr := NewTree[int]()
+	tr := NewTree[*int]()
 
 	// Create a simple linear path: root -> node1 -> node2
 	// Insert two keys that share a prefix but diverge later
@@ -301,17 +301,17 @@ func TestWalk_OnlyTerminalNodes(t *testing.T) {
 	key := []byte{0xFF, 0xFF, 0xFF}
 	mask := []byte{0xFF, 0xFF, 0xFF}
 	val := "deep_value"
-	tr.Insert(ctx, key, mask, &val)
+	tr.Insert(ctx, key, mask, val)
 
 	// Insert a shorter prefix that shares bits with the long key
 	key2 := []byte{0xFF, 0x00, 0x00}
 	mask2 := []byte{0xFF, 0x00, 0x00}
 	val2 := "short_value"
-	tr.Insert(ctx, key2, mask2, &val2)
+	tr.Insert(ctx, key2, mask2, val2)
 
 	visited := []string{}
-	err := tr.Walk(ctx, func(c context.Context, v *string) error {
-		visited = append(visited, *v)
+	err := tr.Walk(ctx, func(c context.Context, v string) error {
+		visited = append(visited, v)
 		return nil
 	})
 
@@ -339,7 +339,7 @@ func TestWalk_EmptyTree(t *testing.T) {
 
 	// Walk empty tree should not call walkerFn
 	callCount := 0
-	err := tr.Walk(ctx, func(c context.Context, v *string) error {
+	err := tr.Walk(ctx, func(c context.Context, v string) error {
 		callCount++
 		return nil
 	})
@@ -355,7 +355,7 @@ func TestWalk_EmptyTree(t *testing.T) {
 
 func TestWalk_StopOnError(t *testing.T) {
 	ctx := context.Background()
-	tr := NewTree[string]()
+	tr := NewTree[*string]()
 
 	// Insert multiple nodes
 	val1 := "node1"
@@ -406,7 +406,7 @@ func BenchmarkInsertExact(b *testing.B) {
 		key := keys[i].key
 		mask := keys[i].mask
 		ival := i
-		tree.Insert(ctx, key, mask, &ival)
+		tree.Insert(ctx, key, mask, ival)
 	}
 }
 
@@ -421,7 +421,7 @@ func BenchmarkSearchExact(b *testing.B) {
 		key := keys[i].key
 		mask := keys[i].mask
 		ival := i
-		tree.Insert(ctx, key, mask, &ival)
+		tree.Insert(ctx, key, mask, ival)
 	}
 
 	b.ResetTimer()
@@ -443,7 +443,7 @@ func BenchmarkSearchPartial(b *testing.B) {
 		key := keys[i].key
 		mask := keys[i].mask
 		ival := i
-		tree.Insert(ctx, key, mask, &ival)
+		tree.Insert(ctx, key, mask, ival)
 	}
 
 	b.ResetTimer()
@@ -465,7 +465,7 @@ func BenchmarkDelete(b *testing.B) {
 		key := keys[i].key
 		mask := keys[i].mask
 		ival := i
-		tree.Insert(ctx, key, mask, &ival)
+		tree.Insert(ctx, key, mask, ival)
 	}
 
 	b.ResetTimer()
@@ -510,7 +510,7 @@ func BenchmarkGCPressure(b *testing.B) {
 				mask := keys[i].mask
 
 				ival := i
-				tree.Insert(ctx, key, mask, &ival)
+				tree.Insert(ctx, key, mask, ival)
 			}
 
 			b.StopTimer()
@@ -541,7 +541,7 @@ func BenchmarkMixedOperations(b *testing.B) {
 		key := keys[i].key
 		mask := keys[i].mask
 		ival := i
-		tree.Insert(ctx, key, mask, &ival)
+		tree.Insert(ctx, key, mask, ival)
 	}
 
 	b.ResetTimer()
@@ -555,7 +555,7 @@ func BenchmarkMixedOperations(b *testing.B) {
 
 		if op < 40 {
 			ival := i
-			tree.Insert(ctx, key, mask, &ival)
+			tree.Insert(ctx, key, mask, ival)
 		} else if op < 90 {
 			tree.SearchExact(ctx, key, mask)
 		} else {
@@ -580,7 +580,7 @@ func BenchmarkAllocations(b *testing.B) {
 					key := keys[i].key
 					mask := keys[i].mask
 					ival := i
-					tree.Insert(ctx, key, mask, &ival)
+					tree.Insert(ctx, key, mask, ival)
 				}
 			},
 		},
@@ -593,7 +593,7 @@ func BenchmarkAllocations(b *testing.B) {
 					key := keys[i].key
 					mask := keys[i].mask
 					ival := i
-					tree.Insert(ctx, key, mask, &ival)
+					tree.Insert(ctx, key, mask, ival)
 				}
 				for i := 0; i < 1000; i++ {
 					key := keys[i].key

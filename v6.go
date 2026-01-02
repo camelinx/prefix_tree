@@ -87,7 +87,7 @@ func NewV6TreeWithLockHandlers[T any](rlockFn ReadLockFn, runlockFn ReadUnlockFn
 //
 //	OpResult - result of the insert operation
 //	error    - error, if any
-func (v6t *V6Tree[T]) Insert(ctx context.Context, saddr string, value *T) (OpResult, error) {
+func (v6t *V6Tree[T]) Insert(ctx context.Context, saddr string, value T) (OpResult, error) {
 	addr, mask, err := getv6Addr(saddr)
 	if nil != err {
 		return Error, err
@@ -109,10 +109,11 @@ func (v6t *V6Tree[T]) Insert(ctx context.Context, saddr string, value *T) (OpRes
 //	OpResult - result of the delete operation
 //	T        - value associated with the deleted address, if any
 //	error    - error, if any
-func (v6t *V6Tree[T]) Delete(ctx context.Context, saddr string) (OpResult, *T, error) {
+func (v6t *V6Tree[T]) Delete(ctx context.Context, saddr string) (OpResult, T, error) {
+	var zero T
 	addr, mask, err := getv6Addr(saddr)
 	if nil != err {
-		return Error, nil, err
+		return Error, zero, err
 	}
 
 	// Delete from the underlying tree
@@ -136,10 +137,11 @@ func (v6t *V6Tree[T]) Delete(ctx context.Context, saddr string) (OpResult, *T, e
 //	OpResult - result of the search operation
 //	T        - value associated with the found address, if any
 //	error    - error, if any
-func (v6t *V6Tree[T]) Search(ctx context.Context, saddr string) (OpResult, *T, error) {
+func (v6t *V6Tree[T]) Search(ctx context.Context, saddr string) (OpResult, T, error) {
+	var zero T
 	addr, mask, err := getv6Addr(saddr)
 	if nil != err {
-		return Error, nil, err
+		return Error, zero, err
 	}
 
 	// Perform partial search in the underlying tree
@@ -158,10 +160,11 @@ func (v6t *V6Tree[T]) Search(ctx context.Context, saddr string) (OpResult, *T, e
 //	OpResult - result of the search operation
 //	T        - value associated with the found address, if any
 //	error    - error, if any
-func (v6t *V6Tree[T]) SearchExact(ctx context.Context, saddr string) (OpResult, *T, error) {
+func (v6t *V6Tree[T]) SearchExact(ctx context.Context, saddr string) (OpResult, T, error) {
+	var zero T
 	addr, mask, err := getv6Addr(saddr)
 	if nil != err {
-		return Error, nil, err
+		return Error, zero, err
 	}
 
 	return v6t.tree.SearchExact(ctx, addr, mask)
@@ -185,7 +188,7 @@ func (v6t *V6Tree[T]) GetNodesCount() uint64 {
 //
 //	err - nil if successful else an error
 func (v6t *V6Tree[T]) Walk(ctx context.Context, callback WalkerFn[T]) error {
-	v6t.tree.Walk(ctx, func(ctx context.Context, value *T) error {
+	v6t.tree.Walk(ctx, func(ctx context.Context, value T) error {
 		return callback(ctx, value)
 	})
 

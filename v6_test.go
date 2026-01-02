@@ -39,7 +39,7 @@ func BenchmarkV6TreeInsert(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		ival := i
-		v6tree.Insert(ctx, addresses[i], &ival)
+		v6tree.Insert(ctx, addresses[i], ival)
 	}
 }
 
@@ -52,7 +52,7 @@ func BenchmarkV6TreeSearch(b *testing.B) {
 	// Pre-populate
 	for i := 0; i < b.N; i++ {
 		ival := i
-		v6tree.Insert(ctx, addresses[i], &ival)
+		v6tree.Insert(ctx, addresses[i], ival)
 	}
 
 	b.ResetTimer()

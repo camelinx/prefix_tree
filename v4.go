@@ -83,7 +83,7 @@ func NewV4TreeWithLockHandlers[T any](rlockFn ReadLockFn, runlockFn ReadUnlockFn
 //
 //	OpResult - result of the insert operation
 //	error    - error, if any
-func (v4t *V4Tree[T]) Insert(ctx context.Context, saddr string, value *T) (OpResult, error) {
+func (v4t *V4Tree[T]) Insert(ctx context.Context, saddr string, value T) (OpResult, error) {
 	addr, mask, err := getv4Addr(saddr)
 	if nil != err {
 		return Error, err
@@ -105,10 +105,11 @@ func (v4t *V4Tree[T]) Insert(ctx context.Context, saddr string, value *T) (OpRes
 //	OpResult - result of the delete operation
 //	T        - value associated with the deleted address/mask, if any
 //	error    - error, if any
-func (v4t *V4Tree[T]) Delete(ctx context.Context, saddr string) (OpResult, *T, error) {
+func (v4t *V4Tree[T]) Delete(ctx context.Context, saddr string) (OpResult, T, error) {
+	var zero T
 	addr, mask, err := getv4Addr(saddr)
 	if nil != err {
-		return Error, nil, err
+		return Error, zero, err
 	}
 
 	// Delete parsed address and mask from the tree
@@ -132,10 +133,11 @@ func (v4t *V4Tree[T]) Delete(ctx context.Context, saddr string) (OpResult, *T, e
 //	OpResult - result of the search operation
 //	T        - value associated with the found address/mask, if any
 //	error    - error, if any
-func (v4t *V4Tree[T]) Search(ctx context.Context, saddr string) (OpResult, *T, error) {
+func (v4t *V4Tree[T]) Search(ctx context.Context, saddr string) (OpResult, T, error) {
+	var zero T
 	addr, mask, err := getv4Addr(saddr)
 	if nil != err {
-		return Error, nil, err
+		return Error, zero, err
 	}
 
 	// Perform partial search for parsed address and mask in the tree
@@ -154,10 +156,11 @@ func (v4t *V4Tree[T]) Search(ctx context.Context, saddr string) (OpResult, *T, e
 //	OpResult - result of the search operation
 //	T        - value associated with the found address/mask, if any
 //	error    - error, if any
-func (v4t *V4Tree[T]) SearchExact(ctx context.Context, saddr string) (OpResult, *T, error) {
+func (v4t *V4Tree[T]) SearchExact(ctx context.Context, saddr string) (OpResult, T, error) {
+	var zero T
 	addr, mask, err := getv4Addr(saddr)
 	if nil != err {
-		return Error, nil, err
+		return Error, zero, err
 	}
 
 	return v4t.tree.SearchExact(ctx, addr.To4(), mask)
@@ -181,7 +184,7 @@ func (v4t *V4Tree[T]) GetNodesCount() uint64 {
 //
 //	err - nil if successful else an error
 func (v4t *V4Tree[T]) Walk(ctx context.Context, callback WalkerFn[T]) error {
-	v4t.tree.Walk(ctx, func(ctx context.Context, value *T) error {
+	v4t.tree.Walk(ctx, func(ctx context.Context, value T) error {
 		return callback(ctx, value)
 	})
 

@@ -301,11 +301,11 @@ func (t *Tree[T]) Walk(ctx context.Context, walkerFn TreeWalkerFn[T]) error {
 
 **Issue:**
 ```go
-func (t *Tree[T]) SearchExact(...) (OpResult, *T, error) {
+func (t *Tree[T]) SearchExact(...) (OpResult, T, error) {
 	return t.Search(ctx, key, mask, Exact)
 }
 
-func (t *Tree[T]) SearchPartial(...) (OpResult, *T, error) {
+func (t *Tree[T]) SearchPartial(...) (OpResult, T, error) {
 	return t.Search(ctx, key, mask, Partial)
 }
 ```

@@ -26,7 +26,7 @@ type Tree[T any] struct {
 }
 
 // Walker function
-type TreeWalkerFn[T any] func(context.Context, *T) error
+type TreeWalkerFn[T any] func(context.Context, T) error
 
 // Returns a new prefix tree
 // Returns:
@@ -120,7 +120,7 @@ var (
 //
 //	OpResult - result of the operation
 //	error    - error if any
-func (t *Tree[T]) Insert(ctx context.Context, key []byte, mask []byte, value *T) (OpResult, error) {
+func (t *Tree[T]) Insert(ctx context.Context, key []byte, mask []byte, value T) (OpResult, error) {
 	// key and mask lengths must be the same
 	if len(key) != len(mask) {
 		return Error, ErrInvalidKeyMask
@@ -356,9 +356,10 @@ func (t *Tree[T]) find(key []byte, mask []byte, mType MatchType, nodeAncestors *
 //	OpResult - result of the operation
 //	interface{} - value associated with the deleted key
 //	error    - error if any
-func (t *Tree[T]) Delete(ctx context.Context, key []byte, mask []byte) (OpResult, *T, error) {
+func (t *Tree[T]) Delete(ctx context.Context, key []byte, mask []byte) (OpResult, T, error) {
+	var zero T
 	if len(key) != len(mask) {
-		return Error, nil, ErrInvalidKeyMask
+		return Error, zero, ErrInvalidKeyMask
 	}
 
 	t.wlock(ctx)
@@ -372,12 +373,12 @@ func (t *Tree[T]) Delete(ctx context.Context, key []byte, mask []byte) (OpResult
 	// Find the node to delete. It must be an exact match for deletion.
 	node, result, err := t.find(key, mask, Exact, nodeAncestors)
 	if nil != err || Match != result {
-		return Error, nil, err
+		return Error, zero, err
 	}
 
 	// This condition should never be hit
 	if nil == node || !node.IsTerminal() || t.IsRoot(node) {
-		return Error, nil, ErrKeyNotFound
+		return Error, zero, ErrKeyNotFound
 	}
 
 	// Is the match node not a leaf?
@@ -434,9 +435,10 @@ func (t *Tree[T]) Delete(ctx context.Context, key []byte, mask []byte) (OpResult
 //	OpResult - result of the operation
 //	interface{} - value associated with the found key
 //	error    - error if any
-func (t *Tree[T]) Search(ctx context.Context, key []byte, mask []byte, mType MatchType) (OpResult, *T, error) {
+func (t *Tree[T]) Search(ctx context.Context, key []byte, mask []byte, mType MatchType) (OpResult, T, error) {
+	var zero T
 	if len(key) != len(mask) {
-		return Error, nil, ErrInvalidKeyMask
+		return Error, zero, ErrInvalidKeyMask
 	}
 
 	t.rlock(ctx)
@@ -447,25 +449,25 @@ func (t *Tree[T]) Search(ctx context.Context, key []byte, mask []byte, mType Mat
 	// Find the node. Match type is determined by caller.
 	node, result, err := t.find(key, mask, mType, nil)
 	if nil != err {
-		return Error, nil, err
+		return Error, zero, err
 	}
 
 	// Validate result based on match type
 	switch mType {
 	case Exact:
 		if result != Match {
-			return Error, nil, err
+			return Error, zero, err
 		}
 
 	case Partial:
 		if result != Match && result != PartialMatch {
-			return Error, nil, err
+			return Error, zero, err
 		}
 	}
 
 	// This condition should never be hit
 	if nil == node || !node.IsTerminal() || t.IsRoot(node) {
-		return Error, nil, ErrKeyNotFound
+		return Error, zero, ErrKeyNotFound
 	}
 
 	// Search successful
@@ -484,7 +486,7 @@ func (t *Tree[T]) Search(ctx context.Context, key []byte, mask []byte, mType Mat
 //	OpResult - result of the operation
 //	interface{} - value associated with the found key
 //	error    - error if any
-func (t *Tree[T]) SearchExact(ctx context.Context, key []byte, mask []byte) (OpResult, *T, error) {
+func (t *Tree[T]) SearchExact(ctx context.Context, key []byte, mask []byte) (OpResult, T, error) {
 	return t.Search(ctx, key, mask, Exact)
 }
 
@@ -500,7 +502,7 @@ func (t *Tree[T]) SearchExact(ctx context.Context, key []byte, mask []byte) (OpR
 //	OpResult - result of the operation
 //	interface{} - value associated with the found key
 //	error    - error if any
-func (t *Tree[T]) SearchPartial(ctx context.Context, key []byte, mask []byte) (OpResult, *T, error) {
+func (t *Tree[T]) SearchPartial(ctx context.Context, key []byte, mask []byte) (OpResult, T, error) {
 	return t.Search(ctx, key, mask, Partial)
 }
 

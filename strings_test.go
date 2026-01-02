@@ -6,7 +6,7 @@ import (
 )
 
 func TestStrings(t *testing.T) {
-	st := NewStringsTree[int]()
+	st := NewStringsTree[*int]()
 
 	urls := []string{
 		"/api/v1/resource",
@@ -119,7 +119,7 @@ func TestPrefixStrings(t *testing.T) {
 	ctx := context.Background()
 	for i, prefixUrl := range prefixUrls {
 		ival := i
-		res, err := st.Insert(ctx, prefixUrl, &ival)
+		res, err := st.Insert(ctx, prefixUrl, ival)
 		if err != nil || res != Ok {
 			t.Fatalf("Failed to insert %s", prefixUrl)
 		}
@@ -131,10 +131,7 @@ func TestPrefixStrings(t *testing.T) {
 		if err != nil || res != PartialMatch {
 			t.Fatalf("Failed to prefix find api %s", searchUrl)
 		}
-		if pival == nil {
-			t.Fatalf("Expected value %d for prefix api %s, got nil", ival, searchUrl)
-		}
-		if *pival != ival {
+		if pival != ival {
 			t.Fatalf("Expected value %d for prefix api %s, got %d", ival, searchUrl, ival)
 		}
 
@@ -162,7 +159,7 @@ func TestPrefixStrings(t *testing.T) {
 		if err != nil || res != Match {
 			t.Fatalf("Failed to delete %s", prefixUrl)
 		}
-		if pival == nil || *pival != ival {
+		if pival != ival {
 			t.Fatalf("Invalid value for deleted %s: expected %d, got %v", prefixUrl, ival, pival)
 		}
 
@@ -190,7 +187,7 @@ func BenchmarkStringsTreeInsert(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		ival := i
-		stree.Insert(ctx, stringKeys[i], &ival)
+		stree.Insert(ctx, stringKeys[i], ival)
 	}
 }
 
@@ -203,7 +200,7 @@ func BenchmarkStringsTreeSearch(b *testing.B) {
 	// Pre-populate
 	for i := 0; i < b.N; i++ {
 		ival := i
-		stree.Insert(ctx, stringKeys[i], &ival)
+		stree.Insert(ctx, stringKeys[i], ival)
 	}
 
 	b.ResetTimer()

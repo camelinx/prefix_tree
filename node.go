@@ -6,7 +6,7 @@ type Node[T any] struct {
 	left  *Node[T]
 
 	terminal bool
-	value    *T // Can be nil
+	value    T // Can be nil
 }
 
 // Root node. Same as Node.
@@ -40,7 +40,7 @@ func (n *Node[T]) UnmarkTerminal() {
 	n.terminal = false
 }
 
-func (n *Node[T]) SaveAndMarkTerminal(value *T) {
+func (n *Node[T]) SaveAndMarkTerminal(value T) {
 	n.value = value
 	n.MarkTerminal()
 }

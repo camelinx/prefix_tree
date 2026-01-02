@@ -23,7 +23,7 @@ func TestReversedStrings(t *testing.T) {
 	ctx := context.Background()
 	for i, domain := range domains {
 		ival := i
-		res, err := rstree.Insert(ctx, domain, &ival)
+		res, err := rstree.Insert(ctx, domain, ival)
 		if err != nil || res != Ok {
 			t.Fatalf("Failed to insert %s", domain)
 		}
@@ -32,7 +32,7 @@ func TestReversedStrings(t *testing.T) {
 		if err != nil || res != Match {
 			t.Fatalf("Failed to find %s", domain)
 		}
-		if pival == nil || *pival != ival {
+		if pival != ival {
 			t.Fatalf("Invalid value for %s: expected %d, got %v", domain, ival, pival)
 		}
 
@@ -40,11 +40,11 @@ func TestReversedStrings(t *testing.T) {
 		if err != nil || res != Match {
 			t.Fatalf("Failed to find (exact) %s", domain)
 		}
-		if pival == nil || *pival != ival {
+		if pival != ival {
 			t.Fatalf("Invalid value for (exact) %s: expected %d, got %v", domain, ival, pival)
 		}
 
-		res, err = rstree.Insert(ctx, domain, &ival)
+		res, err = rstree.Insert(ctx, domain, ival)
 		if err != nil || res != Dup {
 			t.Fatalf("Failed to recognize %s as duplicate", domain)
 		}
@@ -53,7 +53,7 @@ func TestReversedStrings(t *testing.T) {
 		if err != nil || res != Match {
 			t.Fatalf("Failed to delete %s", domain)
 		}
-		if pival == nil || *pival != ival {
+		if pival != ival {
 			t.Fatalf("Invalid value for deleted %s: expected %d, got %v", domain, ival, pival)
 		}
 
@@ -65,7 +65,7 @@ func TestReversedStrings(t *testing.T) {
 
 	for i, domain := range domains {
 		ival := i
-		res, err := rstree.Insert(ctx, domain, &ival)
+		res, err := rstree.Insert(ctx, domain, ival)
 		if err != nil || res != Ok {
 			t.Fatalf("Failed to insert %s", domain)
 		}
@@ -73,9 +73,9 @@ func TestReversedStrings(t *testing.T) {
 
 	expectedValuesCount := len(domains)
 	walkedValuesCount := 0
-	rstree.Walk(ctx, func(ctx context.Context, ival *int) error {
-		if *ival >= expectedValuesCount {
-			t.Fatalf("Unexpected value %d returned in walk. Expected a value less than %d", *ival, expectedValuesCount)
+	rstree.Walk(ctx, func(ctx context.Context, ival int) error {
+		if ival >= expectedValuesCount {
+			t.Fatalf("Unexpected value %d returned in walk. Expected a value less than %d", ival, expectedValuesCount)
 		}
 
 		walkedValuesCount++
@@ -115,7 +115,7 @@ func TestReversedStringsPrefixSearch(t *testing.T) {
 	ctx := context.Background()
 	for i, domain := range domains {
 		ival := i
-		res, err := rstree.Insert(ctx, domain, &ival)
+		res, err := rstree.Insert(ctx, domain, ival)
 		if err != nil || res != Ok {
 			t.Fatalf("Failed to insert %s", domain)
 		}
@@ -126,11 +126,8 @@ func TestReversedStringsPrefixSearch(t *testing.T) {
 		if err != nil || res != PartialMatch {
 			t.Fatalf("Failed to find prefix domain %s, result = %d", searchDomain, res)
 		}
-		if pival == nil {
-			t.Fatalf("Expected prefix domain %s match value %d, got nil", searchDomain, ival)
-		}
-		if *pival != ival {
-			t.Fatalf("Expected prefix domain %s match value %d, got %d", searchDomain, ival, *pival)
+		if pival != ival {
+			t.Fatalf("Expected prefix domain %s match value %d, got %d", searchDomain, ival, pival)
 		}
 
 		res, _, err = rstree.SearchExact(ctx, searchDomain)
@@ -157,7 +154,7 @@ func TestReversedStringsPrefixSearch(t *testing.T) {
 		if err != nil || res != Match {
 			t.Fatalf("Failed to delete %s", domain)
 		}
-		if pival == nil || *pival != ival {
+		if pival != ival {
 			t.Fatalf("Invalid value for deleted %s: expected %d, got %v", domain, ival, pival)
 		}
 
@@ -185,7 +182,7 @@ func BenchmarkReversedStringsTreeInsert(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		ival := i
-		rstree.Insert(ctx, stringKeys[i], &ival)
+		rstree.Insert(ctx, stringKeys[i], ival)
 	}
 }
 
@@ -198,7 +195,7 @@ func BenchmarkReversedStringsTreeSearch(b *testing.B) {
 	// Pre-populate
 	for i := 0; i < b.N; i++ {
 		ival := i
-		rstree.Insert(ctx, stringKeys[i], &ival)
+		rstree.Insert(ctx, stringKeys[i], ival)
 	}
 
 	b.ResetTimer()

@@ -28,13 +28,13 @@ type ReadUnlockFn func(context.Context)
 type WriteLockFn func(context.Context)
 type UnlockFn func(context.Context)
 
-type WalkerFn[T any] func(context.Context, *T) error
+type WalkerFn[T any] func(context.Context, T) error
 
 type PrefixTree[T any] interface {
-	Insert(context.Context, string, *T) (OpResult, error)
-	Delete(context.Context, string) (OpResult, *T, error)
-	Search(context.Context, string) (OpResult, *T, error)
-	SearchExact(context.Context, string) (OpResult, *T, error)
+	Insert(context.Context, string, T) (OpResult, error)
+	Delete(context.Context, string) (OpResult, T, error)
+	Search(context.Context, string) (OpResult, T, error)
+	SearchExact(context.Context, string) (OpResult, T, error)
 	Walk(context.Context, WalkerFn[T]) error
 	GetNodesCount() uint64
 }

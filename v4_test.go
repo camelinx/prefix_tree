@@ -33,7 +33,7 @@ func basicV4Tests(t *testing.T) {
 }
 
 func randomV4Tests(t *testing.T) {
-	v4t := NewV4Tree[int]()
+	v4t := NewV4Tree[*int]()
 
 	for class := ipv4AddrClassMin + 1; class < ipv4AddrClassMax; class++ {
 		v4gen := newIpv4Generator()
@@ -108,7 +108,7 @@ func randomV4Tests(t *testing.T) {
 			}
 		}
 
-		v4WalkTree := NewV4Tree[int]()
+		v4WalkTree := NewV4Tree[*int]()
 		for i := 0; i < v4gen.count; i++ {
 			ival := i
 			res, err := v4WalkTree.Insert(ctx, v4gen.block[i], &ival)
@@ -134,7 +134,7 @@ func randomV4Tests(t *testing.T) {
 }
 
 func extendedV4Tests(t *testing.T) {
-	v4t := NewV4Tree[string]()
+	v4t := NewV4Tree[*string]()
 
 	elemsMap := make(map[string]bool)
 
@@ -221,7 +221,7 @@ func BenchmarkV4TreeInsert(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		ival := i
-		v4tree.Insert(ctx, addresses[i], &ival)
+		v4tree.Insert(ctx, addresses[i], ival)
 	}
 }
 
@@ -234,7 +234,7 @@ func BenchmarkV4TreeSearch(b *testing.B) {
 	// Pre-populate
 	for i := 0; i < b.N; i++ {
 		ival := i
-		v4tree.Insert(ctx, addresses[i], &ival)
+		v4tree.Insert(ctx, addresses[i], ival)
 	}
 
 	b.ResetTimer()
